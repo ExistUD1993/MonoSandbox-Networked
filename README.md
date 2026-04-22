@@ -1,7 +1,7 @@
 #MonoSandbox
 MonoSandbox is a sandbox-style mod for Gorilla Tag, bringing a Garry’s Mod–inspired experience into virtual reality. It adds an interactive menu and a variety of creative tools that let players experiment, build, and have fun in new ways.
 
-##Features
+#Features
 - Simple & Intuitive Menu
 - A clean, easy-to-use interface designed for smooth interaction in VR.
 - Sandbox Gameplay
@@ -11,7 +11,7 @@ MonoSandbox is a sandbox-style mod for Gorilla Tag, bringing a Garry’s Mod–i
   Polished Experience
 - Built and refined with feedback from an active player base.
 
-##Getting Started
+#Getting Started
 - Install Gorilla Tag 
 - Set up Bepinex
 - Download the latest release 
