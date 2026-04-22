@@ -289,7 +289,7 @@ namespace MonoSandbox
                 lastInRoom = PhotonNetwork.InRoom;
             }
 
-            if (GTPlayer.Instance != null) RefCache.HitExists = Physics.Raycast(GTPlayer.Instance.rightControllerTransform.position, GTPlayer.Instance.rightControllerTransform.forward, out RefCache.Hit, 2000, _layerMask);
+            if (GTPlayer.Instance != null) RefCache.HitExists = Physics.Raycast(GTPlayer.Instance.RightHand.controllerTransform.position, GTPlayer.Instance.RightHand.controllerTransform.forward, out RefCache.Hit, 2000, _layerMask);
 
             #region List
 

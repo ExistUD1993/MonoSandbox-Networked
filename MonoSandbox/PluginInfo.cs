@@ -3,8 +3,8 @@
     public class PluginInfo
     {
         public const string
-            GUID = "goldentrophy.monosphere.dev.monosandbox", // how ya like that guid
+            GUID = "Exist.monosphere.dev.monosandbox", 
             Name = "MonoSandbox",
-            Version = "1.2.4";
+            Version = "1.6.7";
     }
 }
