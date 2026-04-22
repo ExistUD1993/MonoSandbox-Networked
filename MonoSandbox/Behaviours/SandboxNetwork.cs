@@ -43,8 +43,7 @@ namespace MonoSandbox
 
     public class SandboxObjectIdentity : MonoBehaviour
     {
-        public int NetworkId;
-        public int OwnerActorNumber;
+        public int NetworkId, OwnerActorNumber;
 
         public bool IsOwnedLocally => PhotonNetwork.LocalPlayer != null && OwnerActorNumber == PhotonNetwork.LocalPlayer.ActorNumber;
 
