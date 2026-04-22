@@ -7,8 +7,7 @@ using UnityEngine;
 public class SpringManager : MonoBehaviour
 {
     public List<GameObject> objectList = new List<GameObject>();
-    public bool editMode;
-    public bool BasePlaced;
+    public bool editMode, BasePlaced;
     public GameObject Cursor;
 
     private bool _canPlace = true;
@@ -103,8 +102,7 @@ public class SpringManager : MonoBehaviour
 
 public class SpringLine : MonoBehaviour
 {
-    public GameObject pointone;
-    public GameObject pointtwo;
+    public GameObject pointone, pointtwo;
     public LineRenderer lineRenderer;
 
     public static LineRenderer CreateRenderer(GameObject owner)
@@ -133,8 +131,7 @@ public class SpringLine : MonoBehaviour
 
 public class WeldManager : MonoBehaviour
 {
-    public bool editMode;
-    public bool BasePlaced;
+    public bool editMode, BasePlaced;
     public GameObject Cursor;
 
     private bool _canPlace = true;
@@ -196,8 +193,7 @@ public class BalloonManager : MonoBehaviour
     public List<GameObject> objectList = new List<GameObject>();
     public float balloonPower = 2f;
     public bool editMode;
-    public GameObject Cursor;
-    public GameObject Balloon;
+    public GameObject Balloon, Cursor;
 
     private bool _canPlace = true;
 
@@ -275,7 +271,6 @@ public class BalloonManager : MonoBehaviour
 public class Balloon : MonoBehaviour
 {
     public float power;
-
     private float _maxSpeed;
     private Rigidbody _body;
 
@@ -353,10 +348,7 @@ public static class Softbody
     }
 
     public static ColliderShape Shape;
-    public static float ColliderSize;
-    public static float RigidbodyMass;
-    public static float Spring;
-    public static float Damper;
+    public static float ColliderSize, RigidbodyMass, Spring, Damper;
     public static RigidbodyConstraints Constraints;
 
     public static void Init(ColliderShape shape, float colliderSize, float rigidbodyMass, float spring, float damper, RigidbodyConstraints constraints)

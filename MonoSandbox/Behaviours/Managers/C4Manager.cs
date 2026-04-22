@@ -165,7 +165,6 @@ public class BombDetonate : MonoBehaviour
     public float Radius = 10f;
     public GameObject ExplosionOBJ;
 
-    // Update is called once per frame
     void Update()
     {
         secButtonDown = InputHandling.RightSecondary;

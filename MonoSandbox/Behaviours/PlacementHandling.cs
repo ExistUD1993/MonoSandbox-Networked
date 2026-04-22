@@ -2,19 +2,13 @@ using UnityEngine;
 
 namespace MonoSandbox.Behaviours
 {
-    /// <summary>
-    /// Base behaviour for cursor-driven object placement.
-    /// </summary>
     public class PlacementHandling : MonoBehaviour
     {
         private static readonly Color CursorValidColor = new Color(0.392f, 0.722f, 0.820f, 0.4509804f);
 
         public float Offset = 4f;
-        public bool IsEditing;
-        public bool IsActivated;
-        public bool Placed;
-        public GameObject Cursor;
-        public GameObject SandboxContainer;
+        public bool IsEditing, IsActivated, Placed;
+        public GameObject Cursor, SandboxContainer;
 
         public virtual GameObject CursorRef => null;
 

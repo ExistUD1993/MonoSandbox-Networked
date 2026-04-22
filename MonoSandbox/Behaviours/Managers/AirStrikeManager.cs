@@ -5,12 +5,8 @@ using UnityEngine;
 public class AirStrikeManager : MonoBehaviour
 {
     private bool _canPlace = true;
-
     public bool editMode;
-    public GameObject Cursor;
-    public GameObject AirStrikeModel;
-    public GameObject CursorModel;
-    public GameObject ExplodeModel;
+    public GameObject Cursor, AirStrikeModel,CursorModel,ExplodeModel;
 
     public void Update()
     {

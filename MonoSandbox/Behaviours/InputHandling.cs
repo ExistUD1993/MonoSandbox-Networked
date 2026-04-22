@@ -4,15 +4,8 @@ namespace MonoSandbox.Behaviours
 {
     public class InputHandling : MonoBehaviour
     {
-        public static float LeftTrigger;
-        public static float RightTrigger;
-        public static float LeftGrip;
-        public static float RightGrip;
-
-        public static bool LeftPrimary;
-        public static bool RightPrimary;
-        public static bool LeftSecondary;
-        public static bool RightSecondary;
+        public static float LeftTrigger, RightTrigger, LeftGrip, RightGrip;
+        public static bool LeftPrimary, RightPrimary, LeftSecondary, RightSecondary;
 
         public void Update()
         {

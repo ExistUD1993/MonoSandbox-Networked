@@ -13,11 +13,8 @@ namespace MonoSandbox.Behaviours.UI
 
         private Vector3 _buttonScale;
         private Vector3 _textScale;
-        private bool _active;
-        private bool _flipping;
-        private bool _initialized;
-        private float _scale = 1f;
-        private float _time;
+        private bool _active, _flipping, _initialized;
+        private float _scale = 1f , _time;
 
         protected abstract bool IsActive { get; }
         protected abstract GameObject AssignedTextObject { get; }

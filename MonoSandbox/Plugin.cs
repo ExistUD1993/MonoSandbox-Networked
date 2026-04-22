@@ -18,17 +18,13 @@ namespace MonoSandbox
 
         public static bool InRoom;
 
-        private bool _gameInitialized;
-        private bool _initialized;
-        private bool _lastInRoom;
+        private bool _gameInitialized , _initialized, _lastInRoom;
         private LayerMask _layerMask;
         private AssetBundle _bundle;
         private SandboxMenu _listManager;
 
-        public GameObject _list;
-        public GameObject _itemsContainer;
-        public AudioClip _pageOpen;
-        public AudioClip _itemOpen;
+        public GameObject _list, _itemsContainer;
+        public AudioClip _pageOpen, _itemOpen;
 
         private BoxManager boxManager;
         private GravityManager gravityManager;
