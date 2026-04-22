@@ -1,123 +1,60 @@
-﻿using MonoSandbox;
+using MonoSandbox;
 using MonoSandbox.Behaviours;
 using UnityEngine;
 
-public class FreezeManager : MonoBehaviour
+public abstract class ToggleRigidbodyStateManager : MonoBehaviour
 {
-    bool primaryDown;
-    bool canPlace;
-    public bool editMode = false;
+    private bool _canToggle = true;
 
-    GameObject Cursor = null;
-    GameObject itemsFolder = null;
+    protected GameObject Cursor;
+    public bool editMode;
 
-    void Start()
+    protected abstract void Toggle(Rigidbody body);
+
+    private void Update()
     {
-        itemsFolder = gameObject;
-    }
+        if (!editMode)
+        {
+            ManagerUtils.DestroyCursor(ref Cursor);
+            return;
+        }
 
-    void Update()
-    {
+        Cursor ??= ManagerUtils.CreateSphereCursor();
+
         RaycastHit hitInfo = RefCache.Hit;
-        if (Cursor != null)
+        bool isAllowed = ManagerUtils.TryGetMonoRigidbody(hitInfo, out Rigidbody targetBody);
+        ManagerUtils.UpdateCursor(Cursor, hitInfo, isAllowed);
+
+        if (InputHandling.RightPrimary)
         {
-            bool isAllowed = hitInfo.transform.gameObject.name.Contains("MonoObject") && hitInfo.collider != null && hitInfo.collider.attachedRigidbody != null;
-            Cursor.GetComponent<Renderer>().material.color = isAllowed ? new Color(0.392f, 0.722f, 0.820f, 0.4509804f) : new Color(0.8314f, 0.2471f, 0.1569f, 0.4509804f);
-
-            Cursor.transform.position = hitInfo.point;
-
-            primaryDown = InputHandling.RightPrimary;
-            if (primaryDown)
+            if (_canToggle && isAllowed)
             {
-                if (canPlace && isAllowed)
-                {
-                    Rigidbody freezeRB = hitInfo.collider.attachedRigidbody;
-                    freezeRB.constraints = freezeRB.constraints == RigidbodyConstraints.None ? RigidbodyConstraints.FreezeAll : RigidbodyConstraints.None;
+                Toggle(targetBody);
+                HapticManager.Haptic(HapticManager.HapticType.Create);
+                _canToggle = false;
+            }
 
-                    HapticManager.Haptic(HapticManager.HapticType.Create);
-                    canPlace = false;
-                }
-            }
-            else
-            {
-                canPlace = true;
-            }
+            return;
         }
-        else
-        {
-            if (editMode)
-            {
-                Cursor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                Cursor.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
-                Cursor.GetComponent<Renderer>().material = new Material(RefCache.Selection);
 
-                Destroy(Cursor.GetComponent<SphereCollider>());
-            }
-            else if (Cursor)
-            {
-                Destroy(Cursor.gameObject);
-            }
-        }
-        if (!editMode && Cursor)
-        {
-            Destroy(Cursor.gameObject);
-        }
+        _canToggle = true;
     }
 }
-public class GravityManager : MonoBehaviour
+
+public class FreezeManager : ToggleRigidbodyStateManager
 {
-    bool primaryDown;
-    bool canPlace;
-    public bool editMode = false;
-
-    GameObject Cursor = null;
-
-    void Update()
+    protected override void Toggle(Rigidbody body)
     {
-        RaycastHit hitInfo = RefCache.Hit;
+        body.constraints = body.constraints == RigidbodyConstraints.None
+            ? RigidbodyConstraints.FreezeAll
+            : RigidbodyConstraints.None;
+    }
+}
 
-        if (Cursor != null)
-        {
-            bool isAllowed = hitInfo.transform.gameObject.name.Contains("MonoObject") && hitInfo.collider != null && hitInfo.collider.attachedRigidbody != null;
-            Cursor.GetComponent<Renderer>().material.color = isAllowed ? new Color(0.392f, 0.722f, 0.820f, 0.4509804f) : new Color(0.8314f, 0.2471f, 0.1569f, 0.4509804f);
-
-            Cursor.transform.position = hitInfo.point;
-
-            primaryDown = InputHandling.RightPrimary;
-            if (primaryDown)
-            {
-                if (canPlace && hitInfo.transform.gameObject.name.Contains("MonoObject") && hitInfo.collider != null && hitInfo.collider.attachedRigidbody != null)
-                {
-                    Rigidbody gravityRB = hitInfo.collider.attachedRigidbody;
-                    gravityRB.useGravity = !gravityRB.useGravity;
-
-                    HapticManager.Haptic(HapticManager.HapticType.Create);
-                    canPlace = false;
-                }
-            }
-            else
-            {
-                canPlace = true;
-            }
-        }
-        else
-        {
-            if (editMode)
-            {
-                Cursor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                Cursor.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
-                Cursor.GetComponent<Renderer>().material = new Material(RefCache.Selection);
-
-                Destroy(Cursor.GetComponent<SphereCollider>());
-            }
-            else if (Cursor)
-            {
-                Destroy(Cursor.gameObject);
-            }
-        }
-        if (!editMode && Cursor)
-        {
-            Destroy(Cursor.gameObject);
-        }
+public class GravityManager : ToggleRigidbodyStateManager
+{
+    protected override void Toggle(Rigidbody body)
+    {
+        body.useGravity = !body.useGravity;
     }
 }

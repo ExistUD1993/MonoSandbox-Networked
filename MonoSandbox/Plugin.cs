@@ -1,12 +1,10 @@
-﻿using BepInEx;
+using System.Reflection;
+using BepInEx;
 using GorillaLocomotion;
 using HarmonyLib;
 using MonoSandbox.Behaviours;
 using MonoSandbox.Behaviours.UI;
 using Photon.Pun;
-using System;
-using System.ComponentModel;
-using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,17 +13,22 @@ namespace MonoSandbox
     [BepInPlugin(PluginInfo.GUID, PluginInfo.Name, PluginInfo.Version)]
     public class Plugin : BaseUnityPlugin
     {
+        private const float MenuActivationThreshold = 0.6f;
+        private const int MaxRaycastDistance = 2000;
+
         public static bool InRoom;
+
+        private bool _gameInitialized;
         private bool _initialized;
-
+        private bool _lastInRoom;
         private LayerMask _layerMask;
-
         private AssetBundle _bundle;
-
-        public GameObject _list, _itemsContainer;
-        public AudioClip _pageOpen, _itemOpen;
-
         private SandboxMenu _listManager;
+
+        public GameObject _list;
+        public GameObject _itemsContainer;
+        public AudioClip _pageOpen;
+        public AudioClip _itemOpen;
 
         private BoxManager boxManager;
         private GravityManager gravityManager;
@@ -47,6 +50,11 @@ namespace MonoSandbox
         private HammerManager hammerManager;
         private GrenadeManager grenadeManager;
 
+        public Plugin()
+        {
+            new Harmony(PluginInfo.GUID).PatchAll(typeof(Plugin).Assembly);
+        }
+
         public void OnEnable()
         {
             if (_initialized)
@@ -65,12 +73,39 @@ namespace MonoSandbox
             _list?.SetActive(enabled);
         }
 
-        public Plugin()
+        public void Update()
         {
-            new Harmony(PluginInfo.GUID).PatchAll(typeof(Plugin).Assembly);
+            if (GTPlayer.Instance != null)
+            {
+                EnsureGameInitialized();
+                SyncRoomState();
+            }
+
+            UpdateHitCache();
+            UpdateMenuState();
         }
 
-        private bool hasInit;
+        public void OnJoin()
+        {
+            InRoom = true;
+
+            foreach (Transform child in _itemsContainer.transform)
+            {
+                child.gameObject.SetActive(true);
+            }
+        }
+
+        public void OnLeave()
+        {
+            InRoom = false;
+
+            foreach (Transform child in _itemsContainer.transform)
+            {
+                child.gameObject.SetActive(false);
+            }
+
+            _list.SetActive(false);
+        }
 
         public void OnGameInitialized()
         {
@@ -79,20 +114,117 @@ namespace MonoSandbox
             _layerMask = GTPlayer.Instance.locomotionEnabledLayers;
             _layerMask |= 1 << 8;
 
+            CreateItemsContainer();
+            LoadBundle();
+            LoadSharedAssets();
+            CreateManagers();
+            CreateMenu();
+
+            _initialized = true;
+            ResetEditModes();
+        }
+
+        private void EnsureGameInitialized()
+        {
+            if (_gameInitialized)
+            {
+                return;
+            }
+
+            _gameInitialized = true;
+            OnGameInitialized();
+        }
+
+        private void SyncRoomState()
+        {
+            if (PhotonNetwork.InRoom && !_lastInRoom)
+            {
+                OnJoin();
+            }
+
+            if (!PhotonNetwork.InRoom && _lastInRoom)
+            {
+                OnLeave();
+            }
+
+            _lastInRoom = PhotonNetwork.InRoom;
+        }
+
+        private void UpdateHitCache()
+        {
+            if (GTPlayer.Instance == null)
+            {
+                return;
+            }
+
+            Transform controllerTransform = GTPlayer.Instance.RightHand.controllerTransform;
+            RefCache.HitExists = Physics.Raycast(
+                controllerTransform.position,
+                controllerTransform.forward,
+                out RefCache.Hit,
+                MaxRaycastDistance,
+                _layerMask);
+        }
+
+        private void UpdateMenuState()
+        {
+            if (!InRoom || !enabled || !_initialized)
+            {
+                HideMenuAndResetEditModes();
+                return;
+            }
+
+            bool shouldShowMenu = InputHandling.LeftGrip > MenuActivationThreshold;
+
+            if (_list.activeInHierarchy)
+            {
+                ApplyMenuSelections();
+                HandleUtilityActions();
+            }
+
+            if (_list.activeSelf != shouldShowMenu)
+            {
+                _list.SetActive(shouldShowMenu);
+            }
+        }
+
+        private void HideMenuAndResetEditModes()
+        {
+            if (_list != null && _list.activeSelf)
+            {
+                _list.SetActive(false);
+            }
+
+            if (_initialized)
+            {
+                ResetEditModes();
+            }
+        }
+
+        private void CreateItemsContainer()
+        {
             _itemsContainer = Instantiate(new GameObject());
-            _itemsContainer.transform.position = Vector3.zero;
             _itemsContainer.name = "ItemFolderMono";
+            _itemsContainer.transform.position = Vector3.zero;
             RefCache.SandboxContainer = _itemsContainer;
+        }
 
-            _bundle = AssetBundle.LoadFromStream(Assembly.GetExecutingAssembly().GetManifestResourceStream("MonoSandbox.Assets.sandboxbundle"));
+        private void LoadBundle()
+        {
+            _bundle = AssetBundle.LoadFromStream(
+                Assembly.GetExecutingAssembly().GetManifestResourceStream("MonoSandbox.Assets.sandboxbundle"));
+        }
 
-            #region Create Managers
-
+        private void LoadSharedAssets()
+        {
             RefCache.Default = _bundle.LoadAsset<Material>("Default");
             RefCache.Selection = _bundle.LoadAsset<Material>("Selection");
             RefCache.PageSelection = _bundle.LoadAsset<AudioClip>("Step1");
             RefCache.ItemSelection = _bundle.LoadAsset<AudioClip>("Step2");
+        }
 
+        private void CreateManagers()
+        {
             C4Control = _itemsContainer.AddComponent<C4Manager>();
             C4Control.C4Model = _bundle.LoadAsset<GameObject>("C4_Weapon");
             C4Control.Mine = _bundle.LoadAsset<GameObject>("Mine_02");
@@ -102,8 +234,8 @@ namespace MonoSandbox
 
             sphereManager = _itemsContainer.AddComponent<SphereManager>();
             sphereManager.Softbody = _bundle.LoadAsset<GameObject>("BoneSphere");
-
             sphereManager.Entity = _bundle.LoadAsset<GameObject>("Demon");
+
             beanManager = _itemsContainer.AddComponent<BeanManager>();
             beanManager.Explosion = _bundle.LoadAsset<GameObject>("Explosion");
             beanManager.Barrel = _bundle.LoadAsset<GameObject>("Barrel");
@@ -120,7 +252,6 @@ namespace MonoSandbox
             bathManager.Bath = _bundle.LoadAsset<GameObject>("Bath");
 
             springManager = _itemsContainer.AddComponent<SpringManager>();
-
             ragdollManager = _itemsContainer.AddComponent<RagdollManager>();
 
             airstrikeManager = _itemsContainer.AddComponent<AirStrikeManager>();
@@ -147,7 +278,6 @@ namespace MonoSandbox
             weaponManager.LaserExplode = _bundle.LoadAsset<GameObject>("Explosion 2");
 
             weldManager = _itemsContainer.AddComponent<WeldManager>();
-
             freezeManager = _itemsContainer.AddComponent<FreezeManager>();
 
             balloonManager = _itemsContainer.AddComponent<BalloonManager>();
@@ -164,50 +294,128 @@ namespace MonoSandbox
             grenadeManager = _itemsContainer.AddComponent<GrenadeManager>();
             grenadeManager.Grenade = _bundle.LoadAsset<GameObject>("Grenade");
             grenadeManager.Explode = _bundle.LoadAsset<GameObject>("Explosion");
+        }
 
-            _initialized = true;
-
-            #endregion
-
-            #region Spawn Da List
-
+        private void CreateMenu()
+        {
             _list = Instantiate(_bundle.LoadAsset<GameObject>("List"));
-            _listManager = _list.AddComponent<SandboxMenu>();
-            _listManager._text = _bundle.LoadAsset<GameObject>("Temp");
-
             _list.name = "List";
             _list.SetActive(false);
             _list.transform.GetChild(0).GetChild(0).GetChild(1).GetComponent<Text>().text = PluginInfo.Version;
 
-            #endregion
-
-            ResetEditModes();
-
+            _listManager = _list.AddComponent<SandboxMenu>();
+            _listManager._text = _bundle.LoadAsset<GameObject>("Temp");
         }
 
-        public void OnJoin()
+        private void ApplyMenuSelections()
         {
-            InRoom = true;
+            boxManager.IsEditing = _listManager.objectButtons[0] || _listManager.objectButtons[7];
+            boxManager.IsPlane = _listManager.objectButtons[7];
 
-            foreach (Transform child in _itemsContainer.transform)
+            sphereManager.IsEditing = _listManager.objectButtons[1] || _listManager.objectButtons[11] || _listManager.funButtons[0];
+            sphereManager.IsSoftbody = _listManager.objectButtons[11];
+            sphereManager.IsEnemy = _listManager.funButtons[0];
+
+            beanManager.IsEditing = _listManager.objectButtons[2] || _listManager.objectButtons[4] || _listManager.objectButtons[5];
+            beanManager.IsBarrel = _listManager.objectButtons[4];
+            beanManager.IsWheel = _listManager.objectButtons[5];
+
+            ragdollManager.IsEditing = _listManager.objectButtons[8] || _listManager.objectButtons[9];
+            ragdollManager.UseGorilla = _listManager.objectButtons[9];
+
+            crateManager.IsEditing = _listManager.objectButtons[3];
+            couchManager.IsEditing = _listManager.objectButtons[6];
+            bathManager.IsEditing = _listManager.objectButtons[10];
+
+            weaponManager.editMode =
+                _listManager.weaponButtons[0] ||
+                _listManager.weaponButtons[1] ||
+                _listManager.weaponButtons[2] ||
+                _listManager.weaponButtons[3] ||
+                _listManager.weaponButtons[4] ||
+                _listManager.weaponButtons[7] ||
+                _listManager.weaponButtons[8] ||
+                _listManager.toolButtons[4];
+
+            C4Control.editMode = _listManager.weaponButtons[5] || _listManager.weaponButtons[9];
+            C4Control.IsMine = _listManager.weaponButtons[9];
+            airstrikeManager.editMode = _listManager.weaponButtons[6];
+            hammerManager.editMode = _listManager.weaponButtons[11];
+            grenadeManager.editMode = _listManager.weaponButtons[10];
+
+            weaponManager.currentWeapon = GetSelectedWeaponIndex();
+
+            weldManager.editMode = _listManager.toolButtons[0];
+            thrusterManager.editMode = _listManager.toolButtons[1];
+            springManager.editMode = _listManager.toolButtons[2];
+            physGunManager.editMode = _listManager.toolButtons[3];
+            freezeManager.editMode = _listManager.toolButtons[5];
+            gravityManager.editMode = _listManager.toolButtons[6];
+            balloonManager.editMode = _listManager.toolButtons[7];
+        }
+
+        private int GetSelectedWeaponIndex()
+        {
+            if (_listManager.weaponButtons[0]) return 0;
+            if (_listManager.weaponButtons[1]) return 1;
+            if (_listManager.weaponButtons[4]) return 2;
+            if (_listManager.weaponButtons[3]) return 3;
+            if (_listManager.weaponButtons[7]) return 4;
+            if (_listManager.weaponButtons[8]) return 5;
+            if (_listManager.toolButtons[4]) return 6;
+            if (_listManager.weaponButtons[2]) return 7;
+
+            return weaponManager.currentWeapon;
+        }
+
+        private void HandleUtilityActions()
+        {
+            if (_listManager.utilButtons[0])
             {
-                child.gameObject.SetActive(true);
+                DestroyChildren(_itemsContainer.transform);
+            }
+
+            if (_listManager.utilButtons[1])
+            {
+                DestroyTrackedObjects(thrusterManager.objectList);
+            }
+
+            if (_listManager.utilButtons[2])
+            {
+                DestroyTrackedObjects(springManager.objectList);
+            }
+
+            if (_listManager.utilButtons[3])
+            {
+                DestroyTrackedObjects(balloonManager.objectList);
             }
         }
 
-        public void OnLeave()
+        private static void DestroyChildren(Transform parent)
         {
-            InRoom = false;
-
-            foreach (Transform child in _itemsContainer.transform)
+            foreach (Transform child in parent)
             {
-                child.gameObject.SetActive(false);
+                Destroy(child.gameObject);
             }
-
-            _list.SetActive(false);
         }
 
-        private bool lastInRoom;
+        private static void DestroyTrackedObjects(System.Collections.Generic.List<GameObject> objects)
+        {
+            if (objects.Count == 0)
+            {
+                return;
+            }
+
+            foreach (GameObject trackedObject in objects)
+            {
+                if (trackedObject != null)
+                {
+                    Destroy(trackedObject);
+                }
+            }
+
+            objects.Clear();
+        }
 
         private void ResetEditModes()
         {
@@ -230,133 +438,6 @@ namespace MonoSandbox
             couchManager.IsEditing = false;
             hammerManager.editMode = false;
             grenadeManager.editMode = false;
-        }
-
-        public void Update()
-        {
-            if (GorillaLocomotion.GTPlayer.Instance != null)
-            {
-                if (!hasInit)
-                {
-                    hasInit = true;
-                    OnGameInitialized();
-                }
-
-                if (PhotonNetwork.InRoom && !lastInRoom)
-                {
-                    OnJoin();
-                }
-
-                if (!PhotonNetwork.InRoom && lastInRoom)
-                {
-                    OnLeave();
-                }
-
-                lastInRoom = PhotonNetwork.InRoom;
-            }
-
-            if (GTPlayer.Instance != null) RefCache.HitExists = Physics.Raycast(GTPlayer.Instance.RightHand.controllerTransform.position, GTPlayer.Instance.RightHand.controllerTransform.forward, out RefCache.Hit, 2000, _layerMask);
-
-            #region List
-
-            if (InRoom && enabled && _initialized)
-            {
-                bool isActive = InputHandling.LeftGrip > 0.6f;
-
-                if (_list.activeInHierarchy)
-                {
-                    boxManager.IsEditing = _listManager.objectButtons[0] || _listManager.objectButtons[7];
-                    boxManager.IsPlane = _listManager.objectButtons[7];
-                    sphereManager.IsEditing = _listManager.objectButtons[1] || _listManager.objectButtons[11] || _listManager.funButtons[0];
-                    sphereManager.IsSoftbody = _listManager.objectButtons[11];
-                    sphereManager.IsEnemy = _listManager.funButtons[0];
-                    beanManager.IsEditing = _listManager.objectButtons[2] || _listManager.objectButtons[4] || _listManager.objectButtons[5];
-                    beanManager.IsBarrel = _listManager.objectButtons[4];
-                    beanManager.IsWheel = _listManager.objectButtons[5];
-                    ragdollManager.IsEditing = _listManager.objectButtons[8] || _listManager.objectButtons[9];
-                    ragdollManager.UseGorilla = _listManager.objectButtons[9];
-                    crateManager.IsEditing = _listManager.objectButtons[3];
-                    couchManager.IsEditing = _listManager.objectButtons[6];
-                    bathManager.IsEditing = _listManager.objectButtons[10];
-
-                    weaponManager.editMode = _listManager.weaponButtons[0] || _listManager.weaponButtons[1] || _listManager.weaponButtons[2] || _listManager.weaponButtons[4] || _listManager.weaponButtons[3] || _listManager.weaponButtons[7] || _listManager.weaponButtons[8] || _listManager.toolButtons[4];
-                    C4Control.editMode = _listManager.weaponButtons[5] || _listManager.weaponButtons[9];
-                    C4Control.IsMine = _listManager.weaponButtons[9];
-                    airstrikeManager.editMode = _listManager.weaponButtons[6];
-                    hammerManager.editMode = _listManager.weaponButtons[11];
-                    grenadeManager.editMode = _listManager.weaponButtons[10];
-
-                    if (_listManager.weaponButtons[0]) weaponManager.currentWeapon = 0;
-                    else if (_listManager.weaponButtons[1]) weaponManager.currentWeapon = 1;
-                    else if (_listManager.weaponButtons[4]) weaponManager.currentWeapon = 2;
-                    else if (_listManager.weaponButtons[3]) weaponManager.currentWeapon = 3;
-                    else if (_listManager.weaponButtons[7]) weaponManager.currentWeapon = 4;
-                    else if (_listManager.weaponButtons[8]) weaponManager.currentWeapon = 5;
-                    else if (_listManager.toolButtons[4]) weaponManager.currentWeapon = 6;
-                    else if (_listManager.weaponButtons[2]) weaponManager.currentWeapon = 7;
-
-                    weldManager.editMode = _listManager.toolButtons[0];
-                    thrusterManager.editMode = _listManager.toolButtons[1];
-                    springManager.editMode = _listManager.toolButtons[2];
-                    physGunManager.editMode = _listManager.toolButtons[3];
-                    freezeManager.editMode = _listManager.toolButtons[5];
-                    gravityManager.editMode = _listManager.toolButtons[6];
-                    balloonManager.editMode = _listManager.toolButtons[7];
-
-                    if (_listManager.utilButtons[0])
-                    {
-                        foreach (Transform child in _itemsContainer.transform)
-                        {
-                            Destroy(child.gameObject);
-                        }
-                    }
-
-                    if (_listManager.utilButtons[1] && thrusterManager.objectList.Count > 0)
-                    {
-                        foreach (GameObject thrusterObj in thrusterManager.objectList)
-                        {
-                            if (thrusterObj == null) continue;
-                            Destroy(thrusterObj);
-                        }
-                        thrusterManager.objectList.Clear();
-                    }
-
-                    if (_listManager.utilButtons[2] && springManager.objectList.Count > 0)
-                    {
-                        foreach (GameObject springObj in springManager.objectList)
-                        {
-                            if (springObj == null) continue;
-                            Destroy(springObj);
-                        }
-                        springManager.objectList.Clear();
-                    }
-
-                    if (_listManager.utilButtons[3] && balloonManager.objectList.Count > 0)
-                    {
-                        foreach (GameObject balloonObj in balloonManager.objectList)
-                        {
-                            if (balloonObj == null) continue;
-                            Destroy(balloonObj);
-                        }
-                        balloonManager.objectList.Clear();
-                    }
-                }
-
-                if (_list.activeSelf == isActive) return;
-                _list.SetActive(isActive);
-            }
-            else
-            {
-                if (_list != null && _list.activeSelf)
-                {
-                    _list.SetActive(false);
-                }
-                if (_initialized)
-                {
-                    ResetEditModes();
-                }
-            }
-            #endregion
         }
     }
 }

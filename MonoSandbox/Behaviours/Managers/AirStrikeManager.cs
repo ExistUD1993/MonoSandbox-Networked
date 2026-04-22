@@ -1,114 +1,122 @@
-﻿using MonoSandbox;
+using MonoSandbox;
 using MonoSandbox.Behaviours;
 using UnityEngine;
 
 public class AirStrikeManager : MonoBehaviour
 {
-    public bool primaryDown, canPlace, editMode;
-    public GameObject Cursor, AirStrikeModel, CursorModel, ExplodeModel;
-    GameObject itemsFolder = null;
+    private bool _canPlace = true;
 
-    public void Start()
-    {
-        itemsFolder = gameObject;
-    }
+    public bool editMode;
+    public GameObject Cursor;
+    public GameObject AirStrikeModel;
+    public GameObject CursorModel;
+    public GameObject ExplodeModel;
 
     public void Update()
     {
+        if (!editMode)
+        {
+            ManagerUtils.DestroyCursor(ref Cursor);
+            return;
+        }
+
+        Cursor ??= CreateCursor();
+
         RaycastHit hitInfo = RefCache.Hit;
+        Cursor.transform.position = hitInfo.point;
+        Cursor.transform.forward = hitInfo.normal;
 
-        if (Cursor != null)
+        if (InputHandling.RightPrimary)
         {
-            Cursor.transform.position = hitInfo.point;
-            Cursor.transform.forward = hitInfo.normal;
-            primaryDown = InputHandling.RightPrimary;
-            if (primaryDown)
+            if (_canPlace)
             {
-                if (canPlace)
-                {
-                    GameObject Missile = Instantiate(AirStrikeModel);
-                    Missile.transform.SetParent(itemsFolder.transform, false);
-                    Missile.transform.position = hitInfo.point + new Vector3(0, 80f, 0);
-                    Missile.transform.localScale = new Vector3(50f, 50f, 50f);
-                    Airstrike airstrikeControl = Missile.AddComponent<Airstrike>();
-                    airstrikeControl.StrikeLocation = hitInfo.point;
-                    airstrikeControl.ExplosionOBJ = ExplodeModel;
+                CreateAirstrike(hitInfo.point);
+                HapticManager.Haptic(HapticManager.HapticType.Create);
+                _canPlace = false;
+            }
 
-                    HapticManager.Haptic(HapticManager.HapticType.Create);
-                    canPlace = false;
-                }
-            }
-            else
-            {
-                canPlace = true;
-            }
+            return;
         }
-        else
-        {
-            if (editMode)
-            {
-                Cursor = Instantiate(CursorModel);
-                Cursor.transform.localScale = new Vector3(20f, 20f, 20f);
-            }
-            else if (Cursor)
-            {
-                Destroy(Cursor.gameObject);
-            }
-        }
-        if (!editMode && Cursor)
-        {
-            Destroy(Cursor.gameObject);
-        }
+
+        _canPlace = true;
+    }
+
+    private GameObject CreateCursor()
+    {
+        GameObject cursor = Instantiate(CursorModel);
+        cursor.transform.localScale = Vector3.one * 20f;
+        return cursor;
+    }
+
+    private void CreateAirstrike(Vector3 hitPoint)
+    {
+        GameObject missile = Instantiate(AirStrikeModel);
+        missile.transform.SetParent(transform, false);
+        missile.transform.position = hitPoint + new Vector3(0f, 80f, 0f);
+        missile.transform.localScale = Vector3.one * 50f;
+
+        Airstrike airstrikeControl = missile.AddComponent<Airstrike>();
+        airstrikeControl.StrikeLocation = hitPoint;
+        airstrikeControl.ExplosionOBJ = ExplodeModel;
     }
 }
 
-
 public class Airstrike : MonoBehaviour
 {
+    public static float speed = 20f;
+
     public Vector3 StrikeLocation;
     public GameObject ExplosionOBJ;
-    private bool canExplode = true;
-    public static float speed = 20;
+
+    private bool _canExplode = true;
 
     public void Update()
     {
-        var newspeed = speed * Time.deltaTime;
-        transform.position = transform.position = Vector3.MoveTowards(transform.position, StrikeLocation, newspeed);
+        transform.position = Vector3.MoveTowards(transform.position, StrikeLocation, speed * Time.deltaTime);
 
-        if (Vector3.Distance(transform.position, StrikeLocation) < 0.5f && canExplode)
+        if (_canExplode && Vector3.Distance(transform.position, StrikeLocation) < 0.5f)
         {
+            _canExplode = false;
             Explode();
-            canExplode = false;
         }
     }
 
     public void Explode()
     {
-        gameObject.GetComponent<AudioSource>().minDistance = 15;
-        gameObject.GetComponent<AudioSource>().Play();
-        gameObject.GetComponent<Renderer>().enabled = false;
-        foreach (Transform child in transform) Destroy(child.gameObject);
-        GameObject ExplodeOBJ = Instantiate(ExplosionOBJ);
-        ExplodeOBJ.transform.SetParent(transform);
-        ExplodeOBJ.transform.localPosition = Vector3.zero;
-        ExplodeOBJ.transform.localScale = Vector3.one * 0.3f;
+        AudioSource audioSource = GetComponent<AudioSource>();
+        audioSource.minDistance = 15f;
+        audioSource.Play();
+        GetComponent<Renderer>().enabled = false;
 
-        Collider[] bombs = Physics.OverlapSphere(transform.position, 10);
-        foreach (Collider nearyby in bombs)
+        foreach (Transform child in transform)
         {
-            nearyby.GetComponent<BombDetonate>()?.Explode();
-            nearyby.GetComponent<MineDetonate>()?.Explode();
-            nearyby.GetComponent<Explode>()?.ExplodeObject();
-
-            Rigidbody rig = nearyby.GetComponent<Rigidbody>();
-            if (rig != null && rig.useGravity) rig.AddExplosionForce(14400f, transform.position, 80f, 0.5f, ForceMode.Force);
+            Destroy(child.gameObject);
         }
-        Rigidbody PlayerRigidbody = GorillaLocomotion.GTPlayer.Instance.GetComponent<Rigidbody>();
-        PlayerRigidbody.AddExplosionForce(14400f * Mathf.Sqrt(PlayerRigidbody.mass), transform.position, 80f, 0.5f, ForceMode.Force);
-        Invoke(nameof(Finish), 2);
+
+        GameObject explosionObject = Instantiate(ExplosionOBJ);
+        explosionObject.transform.SetParent(transform);
+        explosionObject.transform.localPosition = Vector3.zero;
+        explosionObject.transform.localScale = Vector3.one * 0.3f;
+
+        foreach (Collider nearby in Physics.OverlapSphere(transform.position, 10f))
+        {
+            nearby.GetComponent<BombDetonate>()?.Explode();
+            nearby.GetComponent<MineDetonate>()?.Explode();
+            nearby.GetComponent<Explode>()?.ExplodeObject();
+
+            Rigidbody body = nearby.GetComponent<Rigidbody>();
+            if (body != null && body.useGravity)
+            {
+                body.AddExplosionForce(14400f, transform.position, 80f, 0.5f, ForceMode.Force);
+            }
+        }
+
+        Rigidbody playerBody = GorillaLocomotion.GTPlayer.Instance.GetComponent<Rigidbody>();
+        playerBody.AddExplosionForce(14400f * Mathf.Sqrt(playerBody.mass), transform.position, 80f, 0.5f, ForceMode.Force);
+        Invoke(nameof(Finish), 2f);
     }
 
-    void Finish()
+    private void Finish()
     {
         Destroy(gameObject);
     }

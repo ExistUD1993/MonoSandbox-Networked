@@ -1,10 +1,9 @@
-﻿namespace MonoSandbox
+namespace MonoSandbox
 {
-    public class PluginInfo
+    public static class PluginInfo
     {
-        public const string
-            GUID = "Exist.monosphere.dev.monosandbox", 
-            Name = "MonoSandbox",
-            Version = "1.6.7";
+        public const string GUID = "Exist.monosphere.dev.monosandbox";
+        public const string Name = "MonoSandbox";
+        public const string Version = "1.6.7";
     }
 }

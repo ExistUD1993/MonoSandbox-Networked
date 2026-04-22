@@ -1,17 +1,22 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace MonoSandbox.Behaviours
 {
     /// <summary>
-    /// A base used for placing objects with MonoSandbox
+    /// Base behaviour for cursor-driven object placement.
     /// </summary>
     public class PlacementHandling : MonoBehaviour
     {
-        public float Offset = 4f;
-        public bool IsEditing, IsActivated, Placed;
-        public GameObject Cursor, SandboxContainer;
+        private static readonly Color CursorValidColor = new Color(0.392f, 0.722f, 0.820f, 0.4509804f);
 
-        public virtual GameObject CursorRef { get; }
+        public float Offset = 4f;
+        public bool IsEditing;
+        public bool IsActivated;
+        public bool Placed;
+        public GameObject Cursor;
+        public GameObject SandboxContainer;
+
+        public virtual GameObject CursorRef => null;
 
         public virtual void Activated(RaycastHit hitInfo)
         {
@@ -20,7 +25,6 @@ namespace MonoSandbox.Behaviours
 
         public virtual void DrawCursor(RaycastHit hitInfo)
         {
-
         }
 
         private void Start()
@@ -30,40 +34,68 @@ namespace MonoSandbox.Behaviours
 
         private void Update()
         {
+            EnsureSandboxContainer();
+            UpdateCursorState();
+
+            if (!IsEditing || Cursor == null)
+            {
+                return;
+            }
+
+            UpdateCursorVisuals(RefCache.Hit);
+            UpdatePlacementInput(RefCache.Hit);
+        }
+
+        private void EnsureSandboxContainer()
+        {
             if (!SandboxContainer)
             {
                 SandboxContainer = RefCache.SandboxContainer;
             }
+        }
 
+        private void UpdateCursorState()
+        {
             if (IsEditing && !Cursor)
             {
                 Cursor = CursorRef;
                 Cursor.GetComponent<Renderer>().material = new Material(RefCache.Selection);
+                return;
             }
-            else if (!IsEditing && Cursor)
+
+            if (!IsEditing && Cursor)
             {
                 Destroy(Cursor);
             }
+        }
 
-            RaycastHit hitInfo = RefCache.Hit;
-            if (IsEditing && Cursor)
+        private void UpdateCursorVisuals(RaycastHit hitInfo)
+        {
+            if (Cursor.activeSelf != RefCache.HitExists)
             {
-                if (Cursor.activeSelf != RefCache.HitExists) Cursor.SetActive(RefCache.HitExists);
-                Cursor.GetComponent<Renderer>().material.color = new Color(0.392f, 0.722f, 0.820f, 0.4509804f);
+                Cursor.SetActive(RefCache.HitExists);
+            }
 
-                if (RefCache.HitExists)
-                    DrawCursor(hitInfo);
+            Cursor.GetComponent<Renderer>().material.color = CursorValidColor;
 
-                IsActivated = InputHandling.RightPrimary;
-                if (IsActivated && !Placed)
-                {
-                    Placed = true;
-                    Activated(hitInfo);
-                }
-                else if (!IsActivated && Placed)
-                {
-                    Placed = false;
-                }
+            if (RefCache.HitExists)
+            {
+                DrawCursor(hitInfo);
+            }
+        }
+
+        private void UpdatePlacementInput(RaycastHit hitInfo)
+        {
+            IsActivated = InputHandling.RightPrimary;
+
+            if (IsActivated && !Placed)
+            {
+                Placed = true;
+                Activated(hitInfo);
+            }
+            else if (!IsActivated && Placed)
+            {
+                Placed = false;
             }
         }
     }

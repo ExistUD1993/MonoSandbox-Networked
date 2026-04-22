@@ -1,45 +1,52 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace MonoSandbox.Behaviours.UI
 {
     public class SandboxMenu : MonoBehaviour
     {
+        private const int ButtonsPerLine = 4;
+        private static readonly int[] PageLabelIndices = { 0, 2, 4, 6, 8 };
+
         public GameObject _menu, _text, _objParent, _toolParent, _utilsParent, _weaponsParent, _funParent, _sideBtnParent, _sender;
         public int _currentPage;
 
         public bool[] objectButtons = new bool[12], weaponButtons = new bool[12], toolButtons = new bool[8], utilButtons = new bool[4], funButtons = new bool[1];
-
-        public string[] objectNames = new string[12] { "Box", "Sphere", "Bean", "Crate", "Barrel", "Wheel", "Couch", "Plane", "Body", "Gorilla", "Bathtub", "Soft Sphere" };
-        public string[] weaponNames = new string[12] { "Revolver", "Shotgun", "Rifle", "Sniper", "Melon Cannon", "C4", "Airstrike", "Laser Gun", "Banana Gun", "Mine", "Grenade", "Hammer" };
-        public string[] toolNames = new string[8] { "Weld", "Thruster", "Spring", "Gravity Gun", "Colourize", "Freeze", "Toggle Gravity", "Balloon" };
-        public string[] utilNames = new string[4] { "Remove All", "Remove Thrusters", "Remove Springs", "Remove Balloons" };
-        public string[] funNames = new string[1] { "Entity" };
+        public string[] objectNames = { "Box", "Sphere", "Bean", "Crate", "Barrel", "Wheel", "Couch", "Plane", "Body", "Gorilla", "Bathtub", "Soft Sphere" };
+        public string[] weaponNames = { "Revolver", "Shotgun", "Rifle", "Sniper", "Melon Cannon", "C4", "Airstrike", "Laser Gun", "Banana Gun", "Mine", "Grenade", "Hammer" };
+        public string[] toolNames = { "Weld", "Thruster", "Spring", "Gravity Gun", "Colourize", "Freeze", "Toggle Gravity", "Balloon" };
+        public string[] utilNames = { "Remove All", "Remove Thrusters", "Remove Springs", "Remove Balloons" };
+        public string[] funNames = { "Entity" };
 
         private Canvas _canvas;
         private AudioSource _audioSource;
+        private GameObject[] _pageParents;
 
         public void Start()
         {
             _menu = transform.GetChild(1).gameObject;
-            _canvas = _menu.transform.GetChild(0).gameObject.GetComponent<Canvas>();
+            _canvas = _menu.transform.GetChild(0).GetComponent<Canvas>();
             _objParent = new GameObject();
             _weaponsParent = new GameObject();
             _toolParent = new GameObject();
             _utilsParent = new GameObject();
             _funParent = new GameObject();
-            _sideBtnParent = new GameObject();
-            _sideBtnParent.name = "SideButtons";
+            _sideBtnParent = new GameObject
+            {
+                name = "SideButtons"
+            };
             _sideBtnParent.transform.SetParent(_menu.transform, false);
 
-            AddPage(objectNames, "Objects", 4, _objParent, 0);
-            AddPage(weaponNames, "Weapons", 4, _weaponsParent, 1);
-            AddPage(toolNames, "Tools", 4, _toolParent, 2);
-            AddPage(utilNames, "Utils", 4, _utilsParent, 3);
-            AddPage(funNames, "Fun", 4, _funParent, 4);
+            _pageParents = new[] { _objParent, _weaponsParent, _toolParent, _utilsParent, _funParent };
+
+            AddPage(objectNames, "Objects", _objParent, 0);
+            AddPage(weaponNames, "Weapons", _weaponsParent, 1);
+            AddPage(toolNames, "Tools", _toolParent, 2);
+            AddPage(utilNames, "Utils", _utilsParent, 3);
+            AddPage(funNames, "Fun", _funParent, 4);
 
             transform.SetParent(RefCache.LHand.transform, false);
-            transform.localPosition = new Vector3(0, 0.14f, 0.075f);
+            transform.localPosition = new Vector3(0f, 0.14f, 0.075f);
             transform.localScale = Vector3.one * 0.5f;
             transform.localEulerAngles = new Vector3(0f, 90f, -5f);
 
@@ -53,124 +60,100 @@ namespace MonoSandbox.Behaviours.UI
 
         public void Update()
         {
-            if (_objParent == null || _weaponsParent == null || _utilsParent == null || _toolParent == null || _funParent == null) return;
-
-            if (_currentPage == 0 && !_objParent.activeSelf)
+            if (_pageParents == null)
             {
-                _objParent.SetActive(true);
-                _canvas.transform.GetChild(0).gameObject.SetActive(true);
-            }
-            else if (_currentPage != 0 && _objParent.activeSelf)
-            {
-                _objParent.SetActive(false);
-                _canvas.transform.GetChild(0).gameObject.SetActive(false);
+                return;
             }
 
-            if (_currentPage == 1 && !_weaponsParent.activeSelf)
+            for (int i = 0; i < _pageParents.Length; i++)
             {
-                _weaponsParent.SetActive(true);
-                _canvas.transform.GetChild(2).gameObject.SetActive(true);
-            }
-            else if (_currentPage != 1 && _weaponsParent.activeSelf)
-            {
-                _weaponsParent.SetActive(false);
-                _canvas.transform.GetChild(2).gameObject.SetActive(false);
-            }
+                bool isActive = _currentPage == i;
+                GameObject pageParent = _pageParents[i];
+                GameObject pageLabel = _canvas.transform.GetChild(PageLabelIndices[i]).gameObject;
 
-            if (_currentPage == 2 && !_toolParent.activeSelf)
-            {
-                _toolParent.SetActive(true);
-                _canvas.transform.GetChild(4).gameObject.SetActive(true);
-            }
-            else if (_currentPage != 2 && _toolParent.activeSelf)
-            {
-                _toolParent.SetActive(false);
-                _canvas.transform.GetChild(4).gameObject.SetActive(false);
-            }
+                if (pageParent.activeSelf != isActive)
+                {
+                    pageParent.SetActive(isActive);
+                }
 
-            if (_currentPage == 3 && !_utilsParent.activeSelf)
-            {
-                _utilsParent.SetActive(true);
-                _canvas.transform.GetChild(6).gameObject.SetActive(true);
-            }
-            else if (_currentPage != 3 && _utilsParent.activeSelf)
-            {
-                _utilsParent.SetActive(false);
-                _canvas.transform.GetChild(6).gameObject.SetActive(false);
-            }
-
-            if (_currentPage == 4 && !_funParent.activeSelf)
-            {
-                _funParent.SetActive(true);
-                _canvas.transform.GetChild(8).gameObject.SetActive(true);
-            }
-            else if (_currentPage != 4 && _funParent.activeSelf)
-            {
-                _funParent.SetActive(false);
-                _canvas.transform.GetChild(8).gameObject.SetActive(false);
+                if (pageLabel.activeSelf != isActive)
+                {
+                    pageLabel.SetActive(isActive);
+                }
             }
         }
 
-        public void AddPage(string[] buttonNames, string pageName, int perline, GameObject buttonParent, int pIndex)
+        public void AddPage(string[] buttonNames, string pageName, GameObject buttonParent, int pIndex)
         {
             int currentSpot = 0;
-            int currentLine = 0;
             buttonParent.transform.SetParent(_menu.transform, false);
             buttonParent.name = pageName;
+
             GameObject textParent = new GameObject
             {
                 name = pageName
             };
             textParent.transform.parent = _canvas.transform;
-            GameObject sideButton = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            sideButton.layer = 18;
-            sideButton.GetComponent<BoxCollider>().isTrigger = true;
-            sideButton.transform.SetParent(_sideBtnParent.transform, false);
-            sideButton.transform.localScale = new Vector3(0.02f, 0.07f, 0.225f);
-            sideButton.transform.localPosition = new Vector3(0, 0.085f - pIndex * 0.1f, 0.745f);
-            sideButton.GetComponent<Renderer>().material.shader = Shader.Find("GorillaTag/UberShader");
 
-            GameObject pageLabel = Instantiate(_text);
-            pageLabel.transform.SetParent(_canvas.transform, false);
-            pageLabel.name = pageName;
-            pageLabel.GetComponent<RectTransform>().eulerAngles = new Vector3(0, 90, 0);
-            pageLabel.transform.position = sideButton.transform.position + new Vector3(-0.015f, 0, 0);
-            pageLabel.GetComponent<Text>().text = pageName.ToUpper();
-            pageLabel.GetComponent<Text>().color = Color.black;
+            GameObject sideButton = CreateButtonRoot(_sideBtnParent.transform, new Vector3(0.02f, 0.07f, 0.225f), new Vector3(0f, 0.085f - pIndex * 0.1f, 0.745f));
+            GameObject pageLabel = CreateLabel(pageName, sideButton.transform.position, _canvas.transform);
 
-            PageButton pageBtn = sideButton.AddComponent<PageButton>();
-            pageBtn._pageIndex = pIndex;
-            pageBtn._text = pageLabel;
-            pageBtn._list = this;
+            PageButton pageButton = sideButton.AddComponent<PageButton>();
+            pageButton._pageIndex = pIndex;
+            pageButton._text = pageLabel;
+            pageButton._list = this;
 
             for (int i = 0; i < buttonNames.Length; i++)
             {
-                GameObject button = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                button.layer = 18;
-                button.GetComponent<BoxCollider>().isTrigger = true;
-
-                button.transform.localScale = new Vector3(0.025f, 0.145f, 0.145f);
-                button.transform.SetParent(buttonParent.transform, false);
-
-                currentLine = (int)Mathf.Floor(i / perline);
-                button.transform.localPosition = new Vector3(0.02f, -currentLine * (button.transform.localScale.y + 0.03f), (perline - 1 - currentSpot) * (button.transform.localScale.z + 0.02f));
-                currentSpot++;
-                if (currentSpot == perline) currentSpot = 0;
-
-                GameObject objLabel = Instantiate(_text);
-                objLabel.transform.SetParent(textParent.transform, false);
-                objLabel.GetComponent<RectTransform>().eulerAngles = new Vector3(0, 90, 0);
-                objLabel.transform.position = button.transform.position + new Vector3(-0.015f, 0, 0);
-                objLabel.GetComponent<Text>().text = buttonNames[i].ToUpper();
-                objLabel.GetComponent<Text>().color = Color.black;
+                GameObject button = CreateButtonRoot(buttonParent.transform, new Vector3(0.025f, 0.145f, 0.145f), GetButtonPosition(i, ref currentSpot));
+                GameObject itemLabel = CreateLabel(buttonNames[i], button.transform.position, textParent.transform);
 
                 Button buttonScript = button.AddComponent<Button>();
                 buttonScript._buttonIndex = i;
-                buttonScript._text = objLabel;
+                buttonScript._text = itemLabel;
                 buttonScript._list = this;
-
-                button.GetComponent<Renderer>().material.shader = Shader.Find("GorillaTag/UberShader");
             }
+        }
+
+        private static GameObject CreateButtonRoot(Transform parent, Vector3 scale, Vector3 localPosition)
+        {
+            GameObject button = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            button.layer = 18;
+            button.GetComponent<BoxCollider>().isTrigger = true;
+            button.transform.SetParent(parent, false);
+            button.transform.localScale = scale;
+            button.transform.localPosition = localPosition;
+            button.GetComponent<Renderer>().material.shader = Shader.Find("GorillaTag/UberShader");
+            return button;
+        }
+
+        private GameObject CreateLabel(string text, Vector3 worldPosition, Transform parent)
+        {
+            GameObject label = Instantiate(_text);
+            label.transform.SetParent(parent, false);
+            label.GetComponent<RectTransform>().eulerAngles = new Vector3(0f, 90f, 0f);
+            label.transform.position = worldPosition + new Vector3(-0.015f, 0f, 0f);
+            label.GetComponent<Text>().text = text.ToUpper();
+            label.GetComponent<Text>().color = Color.black;
+            label.name = text;
+            return label;
+        }
+
+        private static Vector3 GetButtonPosition(int index, ref int currentSpot)
+        {
+            int currentLine = index / ButtonsPerLine;
+            Vector3 position = new Vector3(
+                0.02f,
+                -currentLine * (0.145f + 0.03f),
+                (ButtonsPerLine - 1 - currentSpot) * (0.145f + 0.02f));
+
+            currentSpot++;
+            if (currentSpot == ButtonsPerLine)
+            {
+                currentSpot = 0;
+            }
+
+            return position;
         }
 
         public void Clear()
@@ -181,7 +164,11 @@ namespace MonoSandbox.Behaviours.UI
             utilButtons = new bool[4];
             funButtons = new bool[1];
         }
-        public void PlayAudio(bool item) => _audioSource.PlayOneShot(item ? RefCache.ItemSelection : RefCache.PageSelection);
+
+        public void PlayAudio(bool item)
+        {
+            _audioSource.PlayOneShot(item ? RefCache.ItemSelection : RefCache.PageSelection);
+        }
 
         public bool[] GetArray() => _currentPage switch
         {

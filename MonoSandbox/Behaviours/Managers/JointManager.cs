@@ -1,111 +1,103 @@
-﻿using MonoSandbox;
-using MonoSandbox.Behaviours;
 using System;
 using System.Collections.Generic;
+using MonoSandbox;
+using MonoSandbox.Behaviours;
 using UnityEngine;
 
 public class SpringManager : MonoBehaviour
 {
     public List<GameObject> objectList = new List<GameObject>();
-
-    public bool primaryDown, canPlace, editMode, BasePlaced;
-    public RaycastHit baseHit;
-    public SpringJoint joint;
+    public bool editMode;
+    public bool BasePlaced;
     public GameObject Cursor;
+
+    private bool _canPlace = true;
+    private RaycastHit _baseHit;
 
     public void Update()
     {
+        if (!editMode)
+        {
+            BasePlaced = false;
+            ManagerUtils.DestroyCursor(ref Cursor);
+            return;
+        }
+
+        Cursor ??= ManagerUtils.CreateSphereCursor();
+
         RaycastHit hitInfo = RefCache.Hit;
-        if (Cursor != null)
+        bool isAllowed = RefCache.HitExists && ManagerUtils.TryGetMonoRigidbody(hitInfo, out _);
+        ManagerUtils.UpdateCursor(Cursor, hitInfo, isAllowed);
+
+        if (InputHandling.RightPrimary)
         {
-            Cursor.transform.position = hitInfo.point;
-
-            bool isAllowed = hitInfo.transform.gameObject.name.Contains("MonoObject");
-            Cursor.GetComponent<Renderer>().material.color = isAllowed ? new Color(0.392f, 0.722f, 0.820f, 0.4509804f) : new Color(0.8314f, 0.2471f, 0.1569f, 0.4509804f);
-
-            primaryDown = InputHandling.RightPrimary;
-            if (primaryDown)
+            if (_canPlace && isAllowed)
             {
-                if (canPlace && isAllowed && RefCache.HitExists)
-                {
-                    PlaceJoint(hitInfo);
-
-                    HapticManager.Haptic(HapticManager.HapticType.Create);
-                    canPlace = false;
-                }
-            }
-            else
-            {
-                canPlace = true;
+                PlaceJoint(hitInfo);
+                _canPlace = false;
             }
 
-        }
-        else
-        {
-            if (editMode)
-            {
-                Cursor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                Cursor.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
-                Cursor.GetComponent<Renderer>().material = new Material(RefCache.Selection);
-                Destroy(Cursor.GetComponent<SphereCollider>());
-            }
-            else if (Cursor)
-            {
-                Destroy(Cursor.gameObject);
-            }
-        }
-        if (!editMode && Cursor)
-        {
-            Destroy(Cursor.gameObject);
+            return;
         }
 
-        void PlaceJoint(RaycastHit hit)
+        _canPlace = true;
+    }
+
+    private void PlaceJoint(RaycastHit hit)
+    {
+        if (!BasePlaced)
         {
-            if (!BasePlaced)
-            {
-                baseHit = hit;
-                BasePlaced = true;
-            }
-            else
-            {
-                foreach (Transform child in baseHit.transform)
-                {
-                    if (child.name.Contains("MSJoint"))
-                    {
-                        return;
-                    }
-                }
-                GameObject JointOBJ = new GameObject();
-                JointOBJ.name = "MSJoint MonoObject";
-                JointOBJ.transform.SetParent(baseHit.transform, false);
-                objectList.Add(JointOBJ);
-                FixedJoint parentFix = JointOBJ.AddComponent<FixedJoint>();
-                parentFix.connectedBody = baseHit.transform.GetComponent<Rigidbody>();
-                joint = JointOBJ.transform.gameObject.AddComponent<SpringJoint>();
-                joint.minDistance = Vector3.Distance(baseHit.transform.position, hit.transform.position) - 1f;
-                joint.damper = 30f;
-                joint.spring = 10f;
-                joint.massScale = 12f;
-                joint.autoConfigureConnectedAnchor = false;
-                joint.connectedBody = hit.transform.GetComponent<Rigidbody>();
-                LineRenderer lineRenderer = JointOBJ.gameObject.AddComponent<LineRenderer>();
-                lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-                lineRenderer.startColor = Color.white;
-                lineRenderer.endColor = Color.white;
-                lineRenderer.startWidth = 0.012f;
-                lineRenderer.endWidth = 0.012f;
-                lineRenderer.positionCount = 2;
+            _baseHit = hit;
+            BasePlaced = true;
+            HapticManager.Haptic(HapticManager.HapticType.Create);
+            return;
+        }
 
-                SpringLine line = JointOBJ.AddComponent<SpringLine>();
-                line.makeLine = false;
-                line.lineRenderer = lineRenderer;
-                line.pointone = JointOBJ;
-                line.pointtwo = hit.transform.gameObject;
+        if (HasManagedSpring(_baseHit.transform))
+        {
+            BasePlaced = false;
+            return;
+        }
 
-                HapticManager.Haptic(HapticManager.HapticType.Create);
-                BasePlaced = false;
+        GameObject jointObject = new GameObject
+        {
+            name = "MSJoint MonoObject"
+        };
+
+        jointObject.transform.SetParent(_baseHit.transform, false);
+        objectList.Add(jointObject);
+
+        FixedJoint fixedJoint = jointObject.AddComponent<FixedJoint>();
+        fixedJoint.connectedBody = _baseHit.rigidbody;
+
+        SpringJoint joint = jointObject.AddComponent<SpringJoint>();
+        joint.minDistance = Vector3.Distance(_baseHit.transform.position, hit.transform.position) - 1f;
+        joint.damper = 30f;
+        joint.spring = 10f;
+        joint.massScale = 12f;
+        joint.autoConfigureConnectedAnchor = false;
+        joint.connectedBody = hit.rigidbody;
+
+        SpringLine line = jointObject.AddComponent<SpringLine>();
+        line.lineRenderer = SpringLine.CreateRenderer(jointObject);
+        line.pointone = jointObject;
+        line.pointtwo = hit.transform.gameObject;
+
+        HapticManager.Haptic(HapticManager.HapticType.Create);
+        BasePlaced = false;
+    }
+
+    private static bool HasManagedSpring(Transform target)
+    {
+        foreach (Transform child in target)
+        {
+            if (child.name.Contains("MSJoint"))
+            {
+                return true;
             }
         }
+
+        return false;
     }
 }
 
@@ -113,37 +105,27 @@ public class SpringLine : MonoBehaviour
 {
     public GameObject pointone;
     public GameObject pointtwo;
-    public bool makeLine = false;
-    public LineRenderer lineRenderer = null;
+    public LineRenderer lineRenderer;
 
-    void Update()
+    public static LineRenderer CreateRenderer(GameObject owner)
     {
-        if (lineRenderer == null && makeLine)
+        LineRenderer renderer = owner.AddComponent<LineRenderer>();
+        renderer.material = new Material(Shader.Find("Sprites/Default"));
+        renderer.startColor = Color.white;
+        renderer.endColor = Color.white;
+        renderer.startWidth = 0.012f;
+        renderer.endWidth = 0.012f;
+        renderer.positionCount = 2;
+        return renderer;
+    }
+
+    private void Update()
+    {
+        if (lineRenderer == null || pointone == null || pointtwo == null)
         {
-            lineRenderer = pointone.gameObject.AddComponent<LineRenderer>();
-            lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-            lineRenderer.startColor = Color.grey;
-            lineRenderer.endColor = Color.grey;
-            lineRenderer.startWidth = 0.02f;
-            lineRenderer.endWidth = 0.02f;
-            lineRenderer.positionCount = 1;
-            lineRenderer.SetPosition(0, pointone.transform.position);
+            return;
         }
-        else
-        {
-            if (makeLine)
-            {
-                lineRenderer.SetPosition(0, pointone.transform.position);
-                if (pointtwo != null)
-                {
-                    if (lineRenderer.positionCount == 1)
-                    {
-                        lineRenderer.positionCount = 2;
-                    }
-                    lineRenderer.SetPosition(1, pointtwo.transform.position);
-                }
-            }
-        }
+
         lineRenderer.SetPosition(0, pointone.transform.position);
         lineRenderer.SetPosition(1, pointtwo.transform.position);
     }
@@ -151,212 +133,187 @@ public class SpringLine : MonoBehaviour
 
 public class WeldManager : MonoBehaviour
 {
-    public bool primaryDown, canPlace, editMode, BasePlaced;
-    public GameObject baseHit, Cursor;
+    public bool editMode;
+    public bool BasePlaced;
+    public GameObject Cursor;
 
-    void Update()
+    private bool _canPlace = true;
+    private GameObject _baseHit;
+
+    private void Update()
     {
+        if (!editMode)
+        {
+            BasePlaced = false;
+            ManagerUtils.DestroyCursor(ref Cursor);
+            return;
+        }
+
+        Cursor ??= ManagerUtils.CreateSphereCursor();
+
         RaycastHit hitInfo = RefCache.Hit;
+        bool isAllowed = RefCache.HitExists && ManagerUtils.TryGetMonoRigidbody(hitInfo, out _);
+        ManagerUtils.UpdateCursor(Cursor, hitInfo, isAllowed);
 
-        if (Cursor != null)
+        if (InputHandling.RightPrimary)
         {
-            Cursor.transform.position = hitInfo.point;
-            primaryDown = InputHandling.RightPrimary;
-
-            bool isAllowed = hitInfo.transform.gameObject.name.Contains("MonoObject") && hitInfo.collider != null && hitInfo.collider.attachedRigidbody != null;
-            Cursor.GetComponent<Renderer>().material.color = isAllowed ? new Color(0.392f, 0.722f, 0.820f, 0.4509804f) : new Color(0.8314f, 0.2471f, 0.1569f, 0.4509804f);
-
-            if (primaryDown)
+            if (_canPlace && isAllowed)
             {
-                if (canPlace && isAllowed && RefCache.HitExists)
-                {
-                    PlaceJoint(hitInfo);
+                PlaceJoint(hitInfo);
+                _canPlace = false;
+            }
 
-                    HapticManager.Haptic(HapticManager.HapticType.Create);
-                    canPlace = false;
-                }
-            }
-            else
-            {
-                canPlace = true;
-            }
+            return;
         }
-        else
-        {
-            if (editMode)
-            {
-                Cursor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                Cursor.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
-                Cursor.GetComponent<Renderer>().material = new Material(RefCache.Selection);
 
-                Destroy(Cursor.GetComponent<SphereCollider>());
-            }
-            else if (Cursor)
-            {
-                Destroy(Cursor.gameObject);
-            }
-        }
-        if (!editMode && Cursor)
-        {
-            Destroy(Cursor.gameObject);
-        }
+        _canPlace = true;
     }
 
-    void PlaceJoint(RaycastHit hit)
+    private void PlaceJoint(RaycastHit hit)
     {
         if (!BasePlaced)
         {
-            baseHit = hit.transform.gameObject;
+            _baseHit = hit.transform.gameObject;
             BasePlaced = true;
+            HapticManager.Haptic(HapticManager.HapticType.Create);
+            return;
         }
-        else
+
+        if (_baseHit.GetInstanceID() != hit.transform.gameObject.GetInstanceID())
         {
-            if (baseHit.GetInstanceID() != hit.transform.gameObject.GetInstanceID())
-            {
-                FixedJoint joint = hit.transform.gameObject.AddComponent<FixedJoint>();
-                joint.connectedBody = hit.collider.attachedRigidbody;
-                joint.autoConfigureConnectedAnchor = true;
-            }
-            BasePlaced = false;
+            FixedJoint joint = hit.transform.gameObject.AddComponent<FixedJoint>();
+            joint.connectedBody = _baseHit.GetComponent<Rigidbody>();
+            joint.autoConfigureConnectedAnchor = true;
+            HapticManager.Haptic(HapticManager.HapticType.Create);
         }
+
+        BasePlaced = false;
     }
 }
 
 public class BalloonManager : MonoBehaviour
 {
     public List<GameObject> objectList = new List<GameObject>();
-
     public float balloonPower = 2f;
-    public float maxSpeed = 1.5f;
+    public bool editMode;
+    public GameObject Cursor;
+    public GameObject Balloon;
 
-    public bool primaryDown, editMode, canPlace;
-    public GameObject Cursor, itemsFolder, Balloon;
-
-    public void Start()
-    {
-        itemsFolder = gameObject;
-    }
+    private bool _canPlace = true;
 
     public void Update()
     {
-        if (editMode)
+        if (!editMode)
         {
-            if (!Cursor)
-            {
-                Cursor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                Cursor.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
-                Cursor.GetComponent<Renderer>().material = new Material(RefCache.Selection);
-                Destroy(Cursor.GetComponent<SphereCollider>());
-            }
-
-            RaycastHit hitInfo = RefCache.Hit;
-            Cursor.transform.position = hitInfo.point;
-
-            bool isAllowed = hitInfo.collider != null && hitInfo.collider.attachedRigidbody != null && hitInfo.transform.gameObject.name.Contains("MonoObject");
-            Cursor.GetComponent<Renderer>().material.color = isAllowed ? new Color(0.392f, 0.722f, 0.820f, 0.4509804f) : new Color(0.8314f, 0.2471f, 0.1569f, 0.4509804f);
-
-            primaryDown = InputHandling.RightPrimary;
-            if (primaryDown)
-            {
-                if (canPlace && isAllowed && RefCache.HitExists)
-                {
-                    foreach (Transform child in hitInfo.transform)
-                    {
-                        if (child.name.Contains("Balloon MonoObject"))
-                        {
-                            return;
-                        }
-                    }
-
-                    GameObject BalloonOBJ = Instantiate(Balloon);
-                    BalloonOBJ.layer = 8;
-                    BalloonOBJ.name = "Balloon MonoObject";
-                    objectList.Add(BalloonOBJ);
-                    BalloonOBJ.transform.parent = itemsFolder.transform;
-                    BalloonOBJ.transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
-                    BalloonOBJ.transform.position = hitInfo.point + (Vector3.up * 0.3f) + Cursor.transform.forward / 3f;
-
-                    Balloon balloonScript = BalloonOBJ.AddComponent<Balloon>();
-                    LineRenderer lineRenderer = BalloonOBJ.gameObject.AddComponent<LineRenderer>();
-                    lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-                    lineRenderer.startColor = Color.white;
-                    lineRenderer.endColor = Color.white;
-                    lineRenderer.startWidth = 0.012f;
-                    lineRenderer.endWidth = 0.012f;
-                    lineRenderer.positionCount = 2;
-
-                    SpringLine line = BalloonOBJ.AddComponent<SpringLine>();
-                    line.makeLine = false;
-                    line.lineRenderer = lineRenderer;
-                    line.pointone = BalloonOBJ.transform.GetChild(0).gameObject;
-                    line.pointtwo = hitInfo.transform.gameObject;
-                    SpringJoint joint = BalloonOBJ.AddComponent<SpringJoint>();
-                    joint.maxDistance = 0f;
-                    joint.spring = 20f;
-                    joint.damper = 10f;
-                    joint.connectedBody = hitInfo.collider.attachedRigidbody;
-                    balloonScript.power = balloonPower;
-
-                    BalloonOBJ.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotation;
-                    HapticManager.Haptic(HapticManager.HapticType.Create);
-                    canPlace = false;
-                }
-            }
-            else
-            {
-                canPlace = true;
-            }
+            ManagerUtils.DestroyCursor(ref Cursor);
+            return;
         }
-        else
+
+        Cursor ??= ManagerUtils.CreateSphereCursor();
+
+        RaycastHit hitInfo = RefCache.Hit;
+        Rigidbody connectedBody = null;
+        bool isAllowed = RefCache.HitExists && ManagerUtils.TryGetMonoRigidbody(hitInfo, out connectedBody);
+        ManagerUtils.UpdateCursor(Cursor, hitInfo, isAllowed);
+
+        if (InputHandling.RightPrimary)
         {
-            if (Cursor != null)
+            if (_canPlace && isAllowed && !HasBalloon(hitInfo.transform))
             {
-                Destroy(Cursor);
+                CreateBalloon(hitInfo, connectedBody);
+                HapticManager.Haptic(HapticManager.HapticType.Create);
+                _canPlace = false;
             }
+
+            return;
         }
+
+        _canPlace = true;
     }
 
+    private static bool HasBalloon(Transform target)
+    {
+        foreach (Transform child in target)
+        {
+            if (child.name.Contains("Balloon MonoObject"))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void CreateBalloon(RaycastHit hitInfo, Rigidbody connectedBody)
+    {
+        GameObject balloonObject = Instantiate(Balloon);
+        balloonObject.layer = 8;
+        balloonObject.name = "Balloon MonoObject";
+        balloonObject.transform.SetParent(transform, false);
+        balloonObject.transform.localScale = Vector3.one * 0.3f;
+        balloonObject.transform.position = hitInfo.point + (Vector3.up * 0.3f) + Cursor.transform.forward / 3f;
+        balloonObject.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotation;
+
+        Balloon balloonScript = balloonObject.AddComponent<Balloon>();
+        balloonScript.power = balloonPower;
+
+        SpringLine line = balloonObject.AddComponent<SpringLine>();
+        line.lineRenderer = SpringLine.CreateRenderer(balloonObject);
+        line.pointone = balloonObject.transform.GetChild(0).gameObject;
+        line.pointtwo = hitInfo.transform.gameObject;
+
+        SpringJoint joint = balloonObject.AddComponent<SpringJoint>();
+        joint.maxDistance = 0f;
+        joint.spring = 20f;
+        joint.damper = 10f;
+        joint.connectedBody = connectedBody;
+
+        objectList.Add(balloonObject);
+    }
 }
+
 public class Balloon : MonoBehaviour
 {
     public float power;
-    public float maxSpeed;
 
-    void Start()
+    private float _maxSpeed;
+    private Rigidbody _body;
+
+    private void Start()
     {
-        maxSpeed = Mathf.Clamp(0.2f + power * 0.4f, -5, 5);
+        _body = GetComponent<Rigidbody>();
+        _maxSpeed = Mathf.Clamp(0.2f + power * 0.4f, -5f, 5f);
     }
 
     private void FixedUpdate()
     {
-        Vector3 newVelocity = gameObject.GetComponent<Rigidbody>().linearVelocity.normalized;
-        newVelocity *= maxSpeed;
-        gameObject.GetComponent<Rigidbody>().linearVelocity = newVelocity;
-        gameObject.GetComponent<Rigidbody>().AddForce(0, -Physics.gravity.y + (float)Math.Pow(3, 4) + power, 0);
+        _body.linearVelocity = Vector3.ClampMagnitude(_body.linearVelocity, _maxSpeed);
+        _body.AddForce(0f, -Physics.gravity.y + (float)Math.Pow(3, 4) + power, 0f);
     }
 }
 
 public class BoneSphere : MonoBehaviour
 {
-
     [Header("Bones")]
-    public GameObject root = null;
-    public GameObject x = null;
-    public GameObject x2 = null;
-    public GameObject y = null;
-    public GameObject y2 = null;
-    public GameObject z = null;
-    public GameObject z2 = null;
+    public GameObject root;
+    public GameObject x;
+    public GameObject x2;
+    public GameObject y;
+    public GameObject y2;
+    public GameObject z;
+    public GameObject z2;
+
     [Header("Spring Joint Settings")]
     [Tooltip("Strength of spring")]
     public float Spring = 800f;
+
     [Tooltip("Higher the value the faster the spring oscillation stops")]
     public float Damper = 0.2f;
+
     [Header("Other Settings")]
     public Softbody.ColliderShape Shape = Softbody.ColliderShape.Sphere;
     public float ColliderSize = 0.002f;
     public float RigidbodyMass = 0.5f;
-    public bool ViewLines = true;
 
     private void Start()
     {
@@ -367,6 +324,7 @@ public class BoneSphere : MonoBehaviour
         y2 = transform.GetChild(0).GetChild(4).gameObject;
         z = transform.GetChild(0).GetChild(5).gameObject;
         z2 = transform.GetChild(0).GetChild(6).gameObject;
+
         Softbody.Init(Shape, ColliderSize, RigidbodyMass, Spring, Damper, RigidbodyConstraints.FreezeRotation);
 
         Softbody.AddCollider(ref root, Softbody.ColliderShape.Sphere, 0.005f, 10f);
@@ -388,13 +346,11 @@ public class BoneSphere : MonoBehaviour
 
 public static class Softbody
 {
-    #region --- helpers ---
     public enum ColliderShape
     {
         Box,
-        Sphere,
+        Sphere
     }
-    #endregion
 
     public static ColliderShape Shape;
     public static float ColliderSize;
@@ -403,53 +359,52 @@ public static class Softbody
     public static float Damper;
     public static RigidbodyConstraints Constraints;
 
-    public static void Init(ColliderShape shape, float collidersize, float rigidbodymass, float spring, float damper, RigidbodyConstraints constraints)
+    public static void Init(ColliderShape shape, float colliderSize, float rigidbodyMass, float spring, float damper, RigidbodyConstraints constraints)
     {
         Shape = shape;
-        ColliderSize = collidersize;
-        RigidbodyMass = rigidbodymass;
+        ColliderSize = colliderSize;
+        RigidbodyMass = rigidbodyMass;
         Spring = spring;
         Damper = damper;
         Constraints = constraints;
     }
-    public static Rigidbody AddCollider(ref GameObject go)
+
+    public static Rigidbody AddCollider(ref GameObject gameObject)
     {
-        return AddCollider(ref go, Shape, ColliderSize, RigidbodyMass);
-    }
-    public static SpringJoint AddSpring(ref GameObject go1, ref GameObject go2)
-    {
-        SpringJoint sp = AddSpring(ref go1, ref go2, Spring, Damper);
-        return sp;
+        return AddCollider(ref gameObject, Shape, ColliderSize, RigidbodyMass);
     }
 
-    public static Rigidbody AddCollider(ref GameObject go, ColliderShape shape, float size, float mass)
+    public static SpringJoint AddSpring(ref GameObject first, ref GameObject second)
+    {
+        return AddSpring(ref first, ref second, Spring, Damper);
+    }
+
+    public static Rigidbody AddCollider(ref GameObject gameObject, ColliderShape shape, float size, float mass)
     {
         switch (shape)
         {
             case ColliderShape.Box:
-                BoxCollider bc = go.AddComponent<BoxCollider>();
-                bc.size = new Vector3(size, size, size);
+                gameObject.AddComponent<BoxCollider>().size = Vector3.one * size;
                 break;
             case ColliderShape.Sphere:
-                SphereCollider sc = go.AddComponent<SphereCollider>();
-                sc.radius = size;
+                gameObject.AddComponent<SphereCollider>().radius = size;
                 break;
         }
 
-        Rigidbody rb = go.AddComponent<Rigidbody>();
-        rb.mass = mass;
-        rb.linearDamping = 0f;
-        rb.angularDamping = 10f;
-        rb.constraints = Constraints;
-        return rb;
+        Rigidbody body = gameObject.AddComponent<Rigidbody>();
+        body.mass = mass;
+        body.linearDamping = 0f;
+        body.angularDamping = 10f;
+        body.constraints = Constraints;
+        return body;
     }
-    public static SpringJoint AddSpring(ref GameObject go1, ref GameObject go2, float spring, float damper)
+
+    public static SpringJoint AddSpring(ref GameObject first, ref GameObject second, float spring, float damper)
     {
-        SpringJoint sp = go1.AddComponent<SpringJoint>();
-        sp.connectedBody = go2.GetComponent<Rigidbody>();
-        sp.spring = spring;
-        sp.damper = damper;
-        return sp;
+        SpringJoint joint = first.AddComponent<SpringJoint>();
+        joint.connectedBody = second.GetComponent<Rigidbody>();
+        joint.spring = spring;
+        joint.damper = damper;
+        return joint;
     }
 }
-

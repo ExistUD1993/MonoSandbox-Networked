@@ -1,22 +1,31 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace MonoSandbox.Behaviours
 {
     public class InputHandling : MonoBehaviour
     {
-        public static float LeftTrigger, RightTrigger, LeftGrip, RightGrip;
-        public static bool LeftPrimary, RightPrimary, LeftSecondary, RightSecondary;
+        public static float LeftTrigger;
+        public static float RightTrigger;
+        public static float LeftGrip;
+        public static float RightGrip;
+
+        public static bool LeftPrimary;
+        public static bool RightPrimary;
+        public static bool LeftSecondary;
+        public static bool RightSecondary;
 
         public void Update()
         {
-            LeftTrigger = ControllerInputPoller.instance.leftControllerIndexFloat;
-            LeftGrip = ControllerInputPoller.instance.leftControllerGripFloat;
-            RightTrigger = ControllerInputPoller.instance.rightControllerIndexFloat;
-            RightGrip = ControllerInputPoller.instance.rightControllerGripFloat;
-            LeftPrimary = ControllerInputPoller.instance.leftControllerPrimaryButton;
-            LeftSecondary = ControllerInputPoller.instance.leftControllerSecondaryButton;
-            RightPrimary = ControllerInputPoller.instance.rightControllerPrimaryButton;
-            RightSecondary = ControllerInputPoller.instance.rightControllerSecondaryButton;
+            ControllerInputPoller input = ControllerInputPoller.instance;
+
+            LeftTrigger = input.leftControllerIndexFloat;
+            LeftGrip = input.leftControllerGripFloat;
+            RightTrigger = input.rightControllerIndexFloat;
+            RightGrip = input.rightControllerGripFloat;
+            LeftPrimary = input.leftControllerPrimaryButton;
+            LeftSecondary = input.leftControllerSecondaryButton;
+            RightPrimary = input.rightControllerPrimaryButton;
+            RightSecondary = input.rightControllerSecondaryButton;
         }
     }
 }
