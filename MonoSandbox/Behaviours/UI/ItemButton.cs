@@ -11,8 +11,7 @@ namespace MonoSandbox.Behaviours.UI
         protected GameObject TextObject;
         protected float LastTime;
 
-        private Vector3 _buttonScale;
-        private Vector3 _textScale;
+        private Vector3 _buttonScale, _textScale;
         private bool _active, _flipping, _initialized;
         private float _scale = 1f , _time;
 
