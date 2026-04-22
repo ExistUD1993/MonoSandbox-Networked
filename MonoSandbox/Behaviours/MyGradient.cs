@@ -2,8 +2,7 @@
 using UnityEngine;
 
 namespace MonoSandbox.Behaviours
-{
-    // https://forum.unity.com/threads/gradients-number-of-keys-and-alpha-values.1231029/#post-7851633
+{ 
     public struct MyGradientKey
     {
 

@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>netstandard2.1</TargetFramework>
-		<AssemblyName>DeinPluginName</AssemblyName>
-		<LocalAssemblyPath>$(MSBuildProjectDirectory)\Assemblies</LocalAssemblyPath>
-		<OutputPath>C:\Program Files (x86)\Steam\steamapps\common\Gorilla Tag\BepInEx\plugins</OutputPath>
+		<AssemblyName>MonoSandbox</AssemblyName>
+		<RootNamespace>MonoSandbox</RootNamespace>
+		<LocalAssemblyPath>$(MSBuildProjectDirectory)\assemblies\assemblies</LocalAssemblyPath>
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 		<AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
 		<CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>

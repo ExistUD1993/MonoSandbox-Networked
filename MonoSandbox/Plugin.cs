@@ -51,25 +51,7 @@ namespace MonoSandbox
         {
             if (_initialized)
             {
-                ragdollManager.IsEditing = false;
-                springManager.editMode = false;
-                weaponManager.editMode = false;
-                thrusterManager.editMode = false;
-                C4Control.editMode = false;
-                boxManager.IsEditing = false;
-                sphereManager.IsEditing = false;
-                beanManager.IsEditing = false;
-                crateManager.IsEditing = false;
-                weldManager.editMode = false;
-                bathManager.IsEditing = false;
-                balloonManager.editMode = false;
-                freezeManager.editMode = false;
-                physGunManager.editMode = false;
-                gravityManager.editMode = false;
-                airstrikeManager.editMode = false;
-                couchManager.IsEditing = false;
-                hammerManager.editMode = false;
-                grenadeManager.editMode = false;
+                ResetEditModes();
             }
         }
 
@@ -77,25 +59,7 @@ namespace MonoSandbox
         {
             if (_initialized)
             {
-                ragdollManager.IsEditing = false;
-                springManager.editMode = false;
-                weaponManager.editMode = false;
-                thrusterManager.editMode = false;
-                C4Control.editMode = false;
-                boxManager.IsEditing = false;
-                sphereManager.IsEditing = false;
-                beanManager.IsEditing = false;
-                crateManager.IsEditing = false;
-                weldManager.editMode = false;
-                bathManager.IsEditing = false;
-                balloonManager.editMode = false;
-                freezeManager.editMode = false;
-                physGunManager.editMode = false;
-                gravityManager.editMode = false;
-                airstrikeManager.editMode = false;
-                couchManager.IsEditing = false;
-                hammerManager.editMode = false;
-                grenadeManager.editMode = false;
+                ResetEditModes();
             }
 
             _list?.SetActive(enabled);
@@ -217,28 +181,7 @@ namespace MonoSandbox
 
             #endregion
 
-            if (_initialized)
-            {
-                ragdollManager.IsEditing = false;
-                springManager.editMode = false;
-                weaponManager.editMode = false;
-                thrusterManager.editMode = false;
-                C4Control.editMode = false;
-                boxManager.IsEditing = false;
-                sphereManager.IsEditing = false;
-                beanManager.IsEditing = false;
-                crateManager.IsEditing = false;
-                weldManager.editMode = false;
-                bathManager.IsEditing = false;
-                balloonManager.editMode = false;
-                freezeManager.editMode = false;
-                physGunManager.editMode = false;
-                gravityManager.editMode = false;
-                airstrikeManager.editMode = false;
-                couchManager.IsEditing = false;
-                hammerManager.editMode = false;
-                grenadeManager.editMode = false;
-            }
+            ResetEditModes();
 
         }
 
@@ -265,7 +208,30 @@ namespace MonoSandbox
         }
 
         private bool lastInRoom;
-        private bool lobbyWasModded;
+
+        private void ResetEditModes()
+        {
+            ragdollManager.IsEditing = false;
+            springManager.editMode = false;
+            weaponManager.editMode = false;
+            thrusterManager.editMode = false;
+            C4Control.editMode = false;
+            boxManager.IsEditing = false;
+            sphereManager.IsEditing = false;
+            beanManager.IsEditing = false;
+            crateManager.IsEditing = false;
+            weldManager.editMode = false;
+            bathManager.IsEditing = false;
+            balloonManager.editMode = false;
+            freezeManager.editMode = false;
+            physGunManager.editMode = false;
+            gravityManager.editMode = false;
+            airstrikeManager.editMode = false;
+            couchManager.IsEditing = false;
+            hammerManager.editMode = false;
+            grenadeManager.editMode = false;
+        }
+
         public void Update()
         {
             if (GorillaLocomotion.GTPlayer.Instance != null)
@@ -387,25 +353,7 @@ namespace MonoSandbox
                 }
                 if (_initialized)
                 {
-                    ragdollManager.IsEditing = false;
-                    springManager.editMode = false;
-                    weaponManager.editMode = false;
-                    thrusterManager.editMode = false;
-                    C4Control.editMode = false;
-                    boxManager.IsEditing = false;
-                    sphereManager.IsEditing = false;
-                    beanManager.IsEditing = false;
-                    crateManager.IsEditing = false;
-                    weldManager.editMode = false;
-                    bathManager.IsEditing = false;
-                    balloonManager.editMode = false;
-                    freezeManager.editMode = false;
-                    physGunManager.editMode = false;
-                    gravityManager.editMode = false;
-                    airstrikeManager.editMode = false;
-                    couchManager.IsEditing = false;
-                    hammerManager.editMode = false;
-                    grenadeManager.editMode = false;
+                    ResetEditModes();
                 }
             }
             #endregion

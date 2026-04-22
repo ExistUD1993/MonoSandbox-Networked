@@ -11,7 +11,7 @@ public class WeaponManager : MonoBehaviour
     private float trigger, lastShot;
     private readonly float weaponMult = 2f;
 
-    private bool canFire = true, canChange = true;
+    private bool canFire = true;
     public bool rightHanded = true, editMode, primary, secondary;
 
     public int currentWeapon = 0;
@@ -498,7 +498,7 @@ public class GrenadeManager : MonoBehaviour
                 Rigidbody rb = Ring.AddComponent<Rigidbody>();
                 rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
-                rb.velocity = _velEstimator.linearVelocity + GorillaLocomotion.GTPlayer.Instance.bodyCollider.attachedRigidbody.velocity;
+                rb.linearVelocity = _velEstimator.linearVelocity + GorillaLocomotion.GTPlayer.Instance.bodyCollider.attachedRigidbody.linearVelocity;
 
                 routine = Explosion();
                 StartCoroutine(routine);
@@ -509,7 +509,7 @@ public class GrenadeManager : MonoBehaviour
                 Rigidbody rb = Holdable.AddComponent<Rigidbody>();
                 rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
-                rb.velocity = _velEstimator.linearVelocity * 1.6f;
+                rb.linearVelocity = _velEstimator.linearVelocity * 1.6f;
                 rb.angularVelocity = _velEstimator.angularVelocity;
             }
         }
@@ -707,7 +707,7 @@ public class Bullet : MonoBehaviour
                 exploded.transform.position = transform.position;
                 foreach (Transform child in exploded.transform)
                 {
-                    child.GetComponent<Rigidbody>().velocity = (child.position - transform.position) * 50f;
+                    child.GetComponent<Rigidbody>().linearVelocity = (child.position - transform.position) * 50f;
                     child.gameObject.AddComponent<SineScaleOut>().Delay = 2f;
                 }
                 Invoke(nameof(DestroyMelon), 4.5f);
