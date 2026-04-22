@@ -29,6 +29,11 @@ public class BoxManager : PlacementHandling
     {
         base.Activated(hitInfo);
 
+        if (SandboxNetwork.TrySpawn(IsPlane ? SandboxSpawnKind.Plane : SandboxSpawnKind.Box, hitInfo.point, hitInfo.normal))
+        {
+            return;
+        }
+
         if (!IsPlane)
         {
             GameObject Box = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -110,6 +115,14 @@ public class SphereManager : PlacementHandling
     public override void Activated(RaycastHit hitInfo)
     {
         base.Activated(hitInfo);
+
+        if (SandboxNetwork.TrySpawn(
+                IsEnemy ? SandboxSpawnKind.Enemy : IsSoftbody ? SandboxSpawnKind.SoftSphere : SandboxSpawnKind.Sphere,
+                hitInfo.point,
+                hitInfo.normal))
+        {
+            return;
+        }
 
         if (!IsSoftbody && !IsEnemy)
         {
@@ -199,6 +212,14 @@ public class BeanManager : PlacementHandling
     public override void Activated(RaycastHit hitInfo)
     {
         base.Activated(hitInfo);
+
+        if (SandboxNetwork.TrySpawn(
+                IsBarrel ? SandboxSpawnKind.Barrel : IsWheel ? SandboxSpawnKind.Wheel : SandboxSpawnKind.Bean,
+                hitInfo.point,
+                hitInfo.normal))
+        {
+            return;
+        }
 
         if (IsBarrel)
         {
@@ -296,6 +317,11 @@ public class BathManager : PlacementHandling
     {
         base.Activated(hitInfo);
 
+        if (SandboxNetwork.TrySpawn(SandboxSpawnKind.Bath, hitInfo.point, hitInfo.normal))
+        {
+            return;
+        }
+
         GameObject BathObject = Instantiate(Bath);
         Rigidbody BathRB = BathObject.AddComponent<Rigidbody>();
         BathObject.layer = 8;
@@ -337,6 +363,11 @@ public class CrateManager : PlacementHandling
     public override void Activated(RaycastHit hitInfo)
     {
         base.Activated(hitInfo);
+
+        if (SandboxNetwork.TrySpawn(SandboxSpawnKind.Crate, hitInfo.point, hitInfo.normal))
+        {
+            return;
+        }
 
         GameObject CrateObject = Instantiate(Crate);
         Rigidbody BoxRB = CrateObject.AddComponent<Rigidbody>();
@@ -381,6 +412,11 @@ public class CouchManager : PlacementHandling
     public override void Activated(RaycastHit hitInfo)
     {
         base.Activated(hitInfo);
+
+        if (SandboxNetwork.TrySpawn(SandboxSpawnKind.Couch, hitInfo.point, hitInfo.normal))
+        {
+            return;
+        }
 
         GameObject CouchObject = Instantiate(Couch);
         Rigidbody CouchRB = CouchObject.AddComponent<Rigidbody>();
@@ -432,6 +468,10 @@ public class Explode : MonoBehaviour
 
             Rigidbody PlayerRigidbody = GorillaLocomotion.GTPlayer.Instance.GetComponent<Rigidbody>();
             PlayerRigidbody.AddExplosionForce(2500f * Multiplier * Mathf.Sqrt(PlayerRigidbody.mass), transform.position, 5 + (0.75f * Multiplier));
+            if (!SandboxNetwork.IsApplyingRemoteExplosion)
+            {
+                SandboxNetwork.BroadcastExplosion(transform.position, 1500f * Multiplier, 6f);
+            }
 
             Invoke(nameof(Destroy), 3);
         }

@@ -48,6 +48,13 @@ public class C4Manager : MonoBehaviour
             primaryDown = InputHandling.RightPrimary;
             if (primaryDown && RefCache.HitExists)
             {
+                if (canPlace && SandboxNetwork.TrySpawn(IsMine ? SandboxSpawnKind.Mine : SandboxSpawnKind.C4, hitInfo.point, hitInfo.normal))
+                {
+                    HapticManager.Haptic(HapticManager.HapticType.Create);
+                    canPlace = false;
+                    return;
+                }
+
                 if (canPlace && !IsMine)
                 {
                     GameObject C4 = Instantiate(C4Model);
@@ -149,6 +156,10 @@ public class MineDetonate : MonoBehaviour
 
         Rigidbody PlayerRigidbody = GorillaLocomotion.GTPlayer.Instance.GetComponent<Rigidbody>();
         PlayerRigidbody.AddExplosionForce(2500f * Multiplier * Mathf.Sqrt(PlayerRigidbody.mass), transform.position, 5 + (0.75f * Multiplier));
+        if (!SandboxNetwork.IsApplyingRemoteExplosion)
+        {
+            SandboxNetwork.BroadcastExplosion(transform.position, 2500f * Multiplier, Radius);
+        }
 
         Destroy(gameObject, 3f);
     }
@@ -205,6 +216,10 @@ public class BombDetonate : MonoBehaviour
             }
             Rigidbody PlayerRigidbody = GorillaLocomotion.GTPlayer.Instance.GetComponent<Rigidbody>();
             PlayerRigidbody.AddExplosionForce(1500f * multiplier * Mathf.Sqrt(PlayerRigidbody.mass), transform.position, 5 + (0.75f * multiplier));
+            if (!SandboxNetwork.IsApplyingRemoteExplosion)
+            {
+                SandboxNetwork.BroadcastExplosion(transform.position, 1500f * multiplier, Radius);
+            }
             Invoke(nameof(Delete), 3);
         }
     }

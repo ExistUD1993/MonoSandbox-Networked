@@ -118,7 +118,9 @@ public class WeaponManager : MonoBehaviour
                         Physics.Raycast(HeldWeapon.transform.GetChild(6).position, -HeldWeapon.transform.GetChild(6).right, out RaycastHit hit, 1000, GorillaLocomotion.GTPlayer.Instance.locomotionEnabledLayers);
                         if (hit.transform.name.Contains("MonoObject") && hit.transform.GetComponent<Renderer>() != null)
                         {
-                            hit.transform.GetComponent<Renderer>().material.color = colourGradient.Evaluate(colourTimestamp);
+                            Color color = colourGradient.Evaluate(colourTimestamp);
+                            hit.transform.GetComponent<Renderer>().material.color = color;
+                            SandboxNetwork.TryApplyState(hit.transform.gameObject, SandboxStateKind.Colorize, color);
                         }
 
                         HapticManager.Haptic(HapticManager.HapticType.Use);
@@ -244,6 +246,7 @@ public class WeaponManager : MonoBehaviour
 
                         Rigidbody PlayerRigidbody = GorillaLocomotion.GTPlayer.Instance.GetComponent<Rigidbody>();
                         PlayerRigidbody.AddExplosionForce(2500f * 4f * Mathf.Sqrt(PlayerRigidbody.mass), hit.point, 5 + (0.75f * 4f));
+                        SandboxNetwork.BroadcastExplosion(hit.point, 2500f * 4f, 24f);
 
                         HapticManager.Haptic(HapticManager.HapticType.Use);
                         canFire = false;
@@ -426,6 +429,10 @@ public class HammerManager : MonoBehaviour
                 {
                     lastTime = Time.time;
                     rb.AddExplosionForce(1800 * Mathf.Clamp(_velEstimator.angularVelocity.magnitude * 1.8f, 1.25f, 3f), Vector3.Lerp(collider.transform.position, holdable.transform.position, 0.4f), 10f);
+                    SandboxNetwork.BroadcastExplosion(
+                        Vector3.Lerp(collider.transform.position, holdable.transform.position, 0.4f),
+                        1800 * Mathf.Clamp(_velEstimator.angularVelocity.magnitude * 1.8f, 1.25f, 3f),
+                        10f);
 
                     HapticManager.Haptic(HapticManager.HapticType.Use);
                     _hammerSource.pitch = Mathf.Clamp(_velEstimator.angularVelocity.magnitude / 20f, 0.9f, 1f);
@@ -546,6 +553,7 @@ public class GrenadeManager : MonoBehaviour
         }
         Rigidbody PlayerRigidbody = GorillaLocomotion.GTPlayer.Instance.GetComponent<Rigidbody>();
         PlayerRigidbody.AddExplosionForce(2500f * 5 * Mathf.Sqrt(PlayerRigidbody.mass), Holdable.transform.position, 5 + (0.75f * 5f));
+        SandboxNetwork.BroadcastExplosion(Holdable.transform.position, 1500f * 5f, 10f);
 
         yield return new WaitForSeconds(3f);
 

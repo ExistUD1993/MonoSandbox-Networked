@@ -58,6 +58,18 @@ public class SpringManager : MonoBehaviour
             return;
         }
 
+        if (SandboxNetwork.TryCreateAttachment(
+                SandboxAttachmentKind.Spring,
+                _baseHit.transform.gameObject,
+                hit.transform.gameObject,
+                Vector3.zero,
+                Vector3.zero))
+        {
+            BasePlaced = false;
+            HapticManager.Haptic(HapticManager.HapticType.Create);
+            return;
+        }
+
         GameObject jointObject = new GameObject
         {
             name = "MSJoint MonoObject"
@@ -178,6 +190,18 @@ public class WeldManager : MonoBehaviour
 
         if (_baseHit.GetInstanceID() != hit.transform.gameObject.GetInstanceID())
         {
+            if (SandboxNetwork.TryCreateAttachment(
+                    SandboxAttachmentKind.Weld,
+                    _baseHit,
+                    hit.transform.gameObject,
+                    Vector3.zero,
+                    Vector3.zero))
+            {
+                HapticManager.Haptic(HapticManager.HapticType.Create);
+                BasePlaced = false;
+                return;
+            }
+
             FixedJoint joint = hit.transform.gameObject.AddComponent<FixedJoint>();
             joint.connectedBody = _baseHit.GetComponent<Rigidbody>();
             joint.autoConfigureConnectedAnchor = true;
@@ -216,6 +240,19 @@ public class BalloonManager : MonoBehaviour
         {
             if (_canPlace && isAllowed && !HasBalloon(hitInfo.transform))
             {
+                if (SandboxNetwork.TryCreateAttachment(
+                        SandboxAttachmentKind.Balloon,
+                        hitInfo.transform.gameObject,
+                        null,
+                        hitInfo.point,
+                        Cursor.transform.forward,
+                        balloonPower))
+                {
+                    HapticManager.Haptic(HapticManager.HapticType.Create);
+                    _canPlace = false;
+                    return;
+                }
+
                 CreateBalloon(hitInfo, connectedBody);
                 HapticManager.Haptic(HapticManager.HapticType.Create);
                 _canPlace = false;

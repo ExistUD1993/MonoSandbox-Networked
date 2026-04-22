@@ -33,6 +33,19 @@ public class ThrusterManager : MonoBehaviour
             {
                 if (canPlace && isAllowed)
                 {
+                    if (SandboxNetwork.TryCreateAttachment(
+                            SandboxAttachmentKind.Thruster,
+                            hitInfo.collider.transform.gameObject,
+                            null,
+                            hitInfo.point,
+                            -hitInfo.normal,
+                            multiplier))
+                    {
+                        HapticManager.Haptic(HapticManager.HapticType.Create);
+                        canPlace = false;
+                        return;
+                    }
+
                     GameObject Thruster = Instantiate(ThrusterModel);
                     Thruster.transform.localScale = new Vector3(10f, 10f, 10f);
                     Thruster.transform.SetParent(hitInfo.collider.transform, true);

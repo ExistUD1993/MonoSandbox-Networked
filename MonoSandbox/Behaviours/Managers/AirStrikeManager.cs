@@ -26,6 +26,13 @@ public class AirStrikeManager : MonoBehaviour
         {
             if (_canPlace)
             {
+                if (SandboxNetwork.TrySpawn(SandboxSpawnKind.Airstrike, hitInfo.point, hitInfo.normal))
+                {
+                    HapticManager.Haptic(HapticManager.HapticType.Create);
+                    _canPlace = false;
+                    return;
+                }
+
                 CreateAirstrike(hitInfo.point);
                 HapticManager.Haptic(HapticManager.HapticType.Create);
                 _canPlace = false;

@@ -9,6 +9,7 @@ public abstract class ToggleRigidbodyStateManager : MonoBehaviour
     protected GameObject Cursor;
     public bool editMode;
 
+    protected abstract SandboxStateKind StateKind { get; }
     protected abstract void Toggle(Rigidbody body);
 
     private void Update()
@@ -29,6 +30,13 @@ public abstract class ToggleRigidbodyStateManager : MonoBehaviour
         {
             if (_canToggle && isAllowed)
             {
+                if (SandboxNetwork.TryApplyState(targetBody.gameObject, StateKind, Color.clear))
+                {
+                    HapticManager.Haptic(HapticManager.HapticType.Create);
+                    _canToggle = false;
+                    return;
+                }
+
                 Toggle(targetBody);
                 HapticManager.Haptic(HapticManager.HapticType.Create);
                 _canToggle = false;
@@ -43,6 +51,8 @@ public abstract class ToggleRigidbodyStateManager : MonoBehaviour
 
 public class FreezeManager : ToggleRigidbodyStateManager
 {
+    protected override SandboxStateKind StateKind => SandboxStateKind.Freeze;
+
     protected override void Toggle(Rigidbody body)
     {
         body.constraints = body.constraints == RigidbodyConstraints.None
@@ -53,6 +63,8 @@ public class FreezeManager : ToggleRigidbodyStateManager
 
 public class GravityManager : ToggleRigidbodyStateManager
 {
+    protected override SandboxStateKind StateKind => SandboxStateKind.Gravity;
+
     protected override void Toggle(Rigidbody body)
     {
         body.useGravity = !body.useGravity;
