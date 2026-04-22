@@ -18,4 +18,4 @@ MonoSandbox is a sandbox-style mod for Gorilla Tag, bringing a Garry’s Mod–i
 - Launch the game and enjoy the sandbox experience
 
 ### <i>Disclaimer
-MonoSandbox is not affiliated with, endorsed, or sponsored by Gorilla Tag or Another Axiom LLC. Portions of the materials used are property of Another Axiom LLC. ©2021 Another Axiom LLC.
+MonoSandbox is not affiliated with, endorsed, or sponsored by Gorilla Tag or Another Axiom LLC. Portions of the materials used are property of Another Axiom LLC. ©2021 Another Axiom LLC. </i>
