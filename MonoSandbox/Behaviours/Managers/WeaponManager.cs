@@ -62,7 +62,6 @@ public class WeaponManager : MonoBehaviour
             WeaponStuff(currentWeapon);
         }
 
-        //Different gun stuff
         if (editMode && trigger > 0.5f)
         {
             if (canFire)
@@ -86,6 +85,9 @@ public class WeaponManager : MonoBehaviour
                         hit.transform.GetComponent<Explode>()?.ExplodeObject();
                         Destroy(hitPoint, 3);
 
+                        if (!SandboxNetwork.IsApplyingRemoteExplosion)
+                            SandboxNetwork.BroadcastExplosion(hit.point, 600 * weaponForce * weaponMult, 3f);
+
                         HapticManager.Haptic(HapticManager.HapticType.Use);
                         canFire = false;
                     }
@@ -105,6 +107,9 @@ public class WeaponManager : MonoBehaviour
                         hit.transform.GetComponent<BombDetonate>()?.Explode();
                         hit.transform.GetComponent<Explode>()?.ExplodeObject();
                         Destroy(hitPoint, 3);
+
+                        if (!SandboxNetwork.IsApplyingRemoteExplosion)
+                            SandboxNetwork.BroadcastExplosion(hit.point, 650 * weaponForce * weaponMult, 3f);
 
                         HapticManager.Haptic(HapticManager.HapticType.Use);
                         canFire = false;
@@ -127,6 +132,7 @@ public class WeaponManager : MonoBehaviour
                         canFire = false;
                     }
                 }
+
                 if (Time.time > lastShot + 0.75f)
                 {
                     if (holdingWeapon == 7)
@@ -147,9 +153,13 @@ public class WeaponManager : MonoBehaviour
                         hit.transform.GetComponent<Explode>()?.ExplodeObject();
                         Destroy(hitPoint, 3);
 
+                        if (!SandboxNetwork.IsApplyingRemoteExplosion)
+                            SandboxNetwork.BroadcastExplosion(hit.point, 900 * weaponForce * weaponMult, 4f);
+
                         HapticManager.Haptic(HapticManager.HapticType.Use);
                         canFire = false;
                     }
+
                     if (holdingWeapon == 1)
                     {
                         lastShot = Time.time;
@@ -168,10 +178,14 @@ public class WeaponManager : MonoBehaviour
                         hit.transform.GetComponent<Explode>()?.ExplodeObject();
                         Destroy(hitPoint, 3);
 
+                        if (!SandboxNetwork.IsApplyingRemoteExplosion)
+                            SandboxNetwork.BroadcastExplosion(hit.point, 900 * weaponForce * weaponMult, 4f);
+
                         HapticManager.Haptic(HapticManager.HapticType.Use);
                         canFire = false;
                     }
                 }
+
                 if (Time.time > lastShot + 1.25f)
                 {
                     if (holdingWeapon == 2)
@@ -210,6 +224,9 @@ public class WeaponManager : MonoBehaviour
                         hit.transform.GetComponent<Explode>()?.ExplodeObject();
                         Destroy(hitPoint, 3);
 
+                        if (!SandboxNetwork.IsApplyingRemoteExplosion)
+                            SandboxNetwork.BroadcastExplosion(hit.point, 1000 * weaponForce * weaponMult, 4f);
+
                         HapticManager.Haptic(HapticManager.HapticType.Use);
                         canFire = false;
                     }
@@ -246,7 +263,9 @@ public class WeaponManager : MonoBehaviour
 
                         Rigidbody PlayerRigidbody = GorillaLocomotion.GTPlayer.Instance.GetComponent<Rigidbody>();
                         PlayerRigidbody.AddExplosionForce(2500f * 4f * Mathf.Sqrt(PlayerRigidbody.mass), hit.point, 5 + (0.75f * 4f));
-                        SandboxNetwork.BroadcastExplosion(hit.point, 2500f * 4f, 24f);
+
+                        if (!SandboxNetwork.IsApplyingRemoteExplosion)
+                            SandboxNetwork.BroadcastExplosion(hit.point, 2500f * 4f, 24f);
 
                         HapticManager.Haptic(HapticManager.HapticType.Use);
                         canFire = false;
@@ -275,9 +294,10 @@ public class WeaponManager : MonoBehaviour
 
         if (!editMode && HeldWeapon != null)
         {
+            SandboxNetwork.BroadcastWeaponUnequip();
+
             Destroy(HeldWeapon);
             HeldWeapon = null;
-
             holdingWeapon = 100;
         }
     }
@@ -295,6 +315,7 @@ public class WeaponManager : MonoBehaviour
                 HeldWeapon.transform.SetParent(rightHand.transform, false);
             }
             HeldWeapon.AddComponent<SineGunAnimation>().Efficiency = 1.5f;
+            SandboxNetwork.BroadcastWeaponEquip(0);
         }
         else if (index == 1)
         {
@@ -307,6 +328,7 @@ public class WeaponManager : MonoBehaviour
                 HeldWeapon.transform.SetParent(rightHand.transform, false);
             }
             HeldWeapon.AddComponent<SineGunAnimation>().Efficiency = 1.3f;
+            SandboxNetwork.BroadcastWeaponEquip(1);
         }
         else if (index == 2)
         {
@@ -319,6 +341,7 @@ public class WeaponManager : MonoBehaviour
                 HeldWeapon.transform.SetParent(rightHand.transform, false);
             }
             HeldWeapon.AddComponent<SineGunAnimation>().Efficiency = 1.8f;
+            SandboxNetwork.BroadcastWeaponEquip(2);
         }
         else if (index == 3)
         {
@@ -331,6 +354,7 @@ public class WeaponManager : MonoBehaviour
                 HeldWeapon.transform.SetParent(rightHand.transform, false);
             }
             HeldWeapon.AddComponent<SineGunAnimation>().Efficiency = 1.3f;
+            SandboxNetwork.BroadcastWeaponEquip(3);
         }
         else if (index == 4)
         {
@@ -343,6 +367,7 @@ public class WeaponManager : MonoBehaviour
                 HeldWeapon.transform.SetParent(rightHand.transform, false);
             }
             HeldWeapon.AddComponent<SineGunAnimation>().Efficiency = 1.3f;
+            SandboxNetwork.BroadcastWeaponEquip(4);
         }
         else if (index == 5)
         {
@@ -355,10 +380,10 @@ public class WeaponManager : MonoBehaviour
             {
                 HeldWeapon.transform.SetParent(rightHand.transform, false);
             }
-
             SineGunAnimation sineAnim = HeldWeapon.AddComponent<SineGunAnimation>();
             sineAnim.Efficiency = 1.5f;
             sineAnim.UseX = true;
+            SandboxNetwork.BroadcastWeaponEquip(5);
         }
         else if (index == 6)
         {
@@ -377,17 +402,17 @@ public class WeaponManager : MonoBehaviour
             }
             HeldWeapon.AddComponent<SineGunAnimation>().Efficiency = 0.5f;
             HeldWeapon.transform.GetChild(0).GetComponent<Renderer>().material.color = colourGradient.Evaluate(colourTimestamp);
-
+            SandboxNetwork.BroadcastWeaponEquip(6);
         }
         else if (index == 7)
         {
             holdingWeapon = 7;
             HeldWeapon = Instantiate(AssultRiffle);
-
             HeldWeapon.transform.eulerAngles = new Vector3(0f, 90f, -90f);
             HeldWeapon.transform.localPosition = new Vector3(-0.02f, 0.048f, 0.021f);
             HeldWeapon.transform.SetParent(rightHand.transform, false);
             HeldWeapon.AddComponent<SineGunAnimation>();
+            SandboxNetwork.BroadcastWeaponEquip(7);
         }
     }
 }
@@ -568,11 +593,8 @@ public class GrenadeManager : MonoBehaviour
 public class PhysGunManager : MonoBehaviour
 {
     float trigger;
-    bool primary;
-    bool canFreeze;
-    bool shooting;
-    public bool editMode;
-    public bool inRoom;
+    bool primary, canFreeze, shooting;
+    public bool editMode, inRoom;
     private Vector2 joystick;
 
     FixedJoint joint;
@@ -644,12 +666,10 @@ public class PhysGunManager : MonoBehaviour
                     {
                         if (joint.connectedBody.GetComponent<Rigidbody>().constraints == RigidbodyConstraints.None)
                         {
-                            //baseConstraint = RigidbodyConstraints.FreezeAll;
                             joint.connectedBody.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeAll;
                         }
                         else
                         {
-                            //baseConstraint = RigidbodyConstraints.FreezeAll;
                             joint.connectedBody.constraints = RigidbodyConstraints.None;
                         }
                         canFreeze = false;
@@ -681,10 +701,6 @@ public class PhysGunManager : MonoBehaviour
             }
         }
     }
-
-    void Leave()
-    {
-    }
 }
 
 public class Bullet : MonoBehaviour
@@ -694,6 +710,7 @@ public class Bullet : MonoBehaviour
     public float bulletSpeed = 10f;
     public GameObject melonExplode;
     GameObject exploded;
+
     void Update()
     {
         if (gunIndex == 0)
@@ -701,6 +718,7 @@ public class Bullet : MonoBehaviour
             gameObject.transform.Translate(-transform.right * Time.deltaTime * bulletSpeed);
         }
     }
+
     void OnCollisionEnter(Collision other)
     {
         if (!hasCollided)
@@ -718,6 +736,9 @@ public class Bullet : MonoBehaviour
                     child.GetComponent<Rigidbody>().linearVelocity = (child.position - transform.position) * 50f;
                     child.gameObject.AddComponent<SineScaleOut>().Delay = 2f;
                 }
+                if (!SandboxNetwork.IsApplyingRemoteExplosion)
+                    SandboxNetwork.BroadcastExplosion(transform.position, 300f, 2f);
+
                 Invoke(nameof(DestroyMelon), 4.5f);
             }
             if (gunIndex == 0)
@@ -737,6 +758,7 @@ public class Bullet : MonoBehaviour
             }
         }
     }
+
     void DestroyMelon()
     {
         Destroy(exploded);

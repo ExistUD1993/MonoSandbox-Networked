@@ -19,7 +19,7 @@ namespace MonoSandbox
         public static Plugin Instance { get; private set; }
         public static bool InRoom;
 
-        private bool _gameInitialized , _initialized, _lastInRoom;
+        private bool _gameInitialized, _initialized, _lastInRoom;
         private LayerMask _layerMask;
         private AssetBundle _bundle;
         private SandboxMenu _listManager;
@@ -442,6 +442,62 @@ namespace MonoSandbox
             couchManager.IsEditing = false;
             hammerManager.editMode = false;
             grenadeManager.editMode = false;
+        }
+
+        public GameObject CreateRemoteWeapon(int weaponIndex, VRRig rig)
+        {
+            Transform remoteHand = rig.rightHandTransform;
+            if (remoteHand == null) return null;
+            GameObject model = weaponIndex switch
+            {
+                0 => weaponManager.RevolverModel,
+                1 => weaponManager.ShotgunModel,
+                2 => weaponManager.MelonCannonModel,
+                3 => weaponManager.SniperModel,
+                4 => weaponManager.LaserGunModel,
+                5 => weaponManager.BananaGunModel,
+                6 => weaponManager.ToolGunModel,
+                7 => weaponManager.AssultRiffle,
+                _ => null
+            };
+
+            if (model == null) return null;
+
+            GameObject weapon = Instantiate(model);
+            weapon.name = "RemoteWeapon";
+            weapon.transform.SetParent(remoteHand, false);
+            switch (weaponIndex)
+            {
+                case 5: 
+                    weapon.transform.localEulerAngles = new Vector3(0f, 0f, 180f);
+                    weapon.transform.localScale = new Vector3(45, 45, 45);
+                    weapon.transform.localPosition = new Vector3(-0.04f, 0.085f, -0.055f);
+                    break;
+                case 2: 
+                    weapon.transform.localEulerAngles = new Vector3(0f, 90f, -90f);
+                    weapon.transform.localPosition = new Vector3(-0.025f, 0.25f, -0.1f);
+                    break;
+                case 6: 
+                    weapon.transform.localEulerAngles = new Vector3(0f, 90f, -90f);
+                    weapon.transform.localScale = Vector3.one;
+                    weapon.transform.localPosition = new Vector3(-0.03f, 0.02f, 0.035f);
+                    break;
+                case 7: 
+                    weapon.transform.localEulerAngles = new Vector3(0f, 90f, -90f);
+                    weapon.transform.localPosition = new Vector3(-0.02f, 0.048f, 0.021f);
+                    break;
+                default:
+                    weapon.transform.localEulerAngles = new Vector3(0f, 90f, -90f);
+                    weapon.transform.localPosition = new Vector3(-0.02f, 0f, 0.035f);
+                    break;
+            }
+
+            foreach (AudioSource audio in weapon.GetComponentsInChildren<AudioSource>())
+                Destroy(audio);
+            foreach (ParticleSystem ps in weapon.GetComponentsInChildren<ParticleSystem>())
+                ps.Stop();
+
+            return weapon;
         }
 
         internal GameObject CreateNetworkedSpawn(SandboxSpawnKind kind, Vector3 point, Vector3 normal, int networkId)
@@ -909,7 +965,7 @@ namespace MonoSandbox
             springManager.objectList.Add(jointObject);
 
             FixedJoint fixedJoint = jointObject.AddComponent<FixedJoint>();
-            fixedJoint.connectedBody = primaryBody;
+            fixedJoint.connectedBody = secondaryBody; // fixed :)
 
             SpringJoint joint = jointObject.AddComponent<SpringJoint>();
             joint.minDistance = Vector3.Distance(primaryTarget.transform.position, secondaryTarget.transform.position) - 1f;

@@ -97,8 +97,10 @@ namespace MonoSandbox
         private const byte StateEventCode = 64;
         private const byte AttachmentEventCode = 65;
         private const byte ExplosionEventCode = 66;
+        private const byte WeaponSyncEventCode = 67;
 
         private static readonly Dictionary<int, GameObject> NetworkedObjects = new Dictionary<int, GameObject>();
+        private static readonly Dictionary<int, GameObject> RemoteWeapons = new Dictionary<int, GameObject>();
 
         public static SandboxNetwork Instance { get; private set; }
         public static bool ShouldSync => Instance != null && PhotonNetwork.InRoom && Plugin.InRoom;
@@ -109,6 +111,10 @@ namespace MonoSandbox
         private void Awake()
         {
             Instance = this;
+            if (PhotonNetwork.LocalPlayer != null)
+            {
+                _nextNetworkId = PhotonNetwork.LocalPlayer.ActorNumber * 10000;
+            }
         }
 
         private void OnEnable()
@@ -247,6 +253,30 @@ namespace MonoSandbox
                 SendOptions.SendUnreliable);
         }
 
+        public static void BroadcastWeaponEquip(int weaponIndex)
+        {
+            if (!ShouldSync) return;
+
+            object[] eventData = { weaponIndex, PhotonNetwork.LocalPlayer.ActorNumber };
+            PhotonNetwork.RaiseEvent(
+                WeaponSyncEventCode,
+                eventData,
+                new RaiseEventOptions { Receivers = ReceiverGroup.Others },
+                SendOptions.SendReliable);
+        }
+
+        public static void BroadcastWeaponUnequip()
+        {
+            if (!ShouldSync) return;
+
+            object[] eventData = { -1, PhotonNetwork.LocalPlayer.ActorNumber };
+            PhotonNetwork.RaiseEvent(
+                WeaponSyncEventCode,
+                eventData,
+                new RaiseEventOptions { Receivers = ReceiverGroup.Others },
+                SendOptions.SendReliable);
+        }
+
         public static void AttachIdentity(GameObject gameObject, int networkId, int ownerActorNumber = 0)
         {
             SandboxObjectIdentity identity = gameObject.GetComponent<SandboxObjectIdentity>();
@@ -326,6 +356,18 @@ namespace MonoSandbox
                 case ExplosionEventCode:
                     HandleExplosionEvent((object[])photonEvent.CustomData);
                     break;
+                case WeaponSyncEventCode:
+                    HandleWeaponSyncEvent((object[])photonEvent.CustomData, photonEvent.Sender);
+                    break;
+            }
+        }
+
+        public void OnPlayerLeftRoom(Player otherPlayer)
+        {
+            if (RemoteWeapons.TryGetValue(otherPlayer.ActorNumber, out GameObject weapon))
+            {
+                Destroy(weapon);
+                RemoteWeapons.Remove(otherPlayer.ActorNumber);
             }
         }
 
@@ -387,8 +429,7 @@ namespace MonoSandbox
                 body.linearVelocity = velocity;
                 body.angularVelocity = angularVelocity;
             }
-
-            if (identity != null)
+            if (identity != null && identity.OwnerActorNumber == senderActorNumber)
             {
                 identity.OwnerActorNumber = senderActorNumber;
             }
@@ -441,6 +482,30 @@ namespace MonoSandbox
             finally
             {
                 IsApplyingRemoteExplosion = false;
+            }
+        }
+
+        private void HandleWeaponSyncEvent(object[] eventData, int senderActorNumber)
+        {
+            int weaponIndex = (int)eventData[0];
+            if (RemoteWeapons.TryGetValue(senderActorNumber, out GameObject existing))
+            {
+                Destroy(existing);
+                RemoteWeapons.Remove(senderActorNumber);
+            }
+            if (weaponIndex == -1) 
+                return;
+            foreach (VRRig rig in VRRigCache.ActiveRigs)
+            {
+                if (rig.Creator.ActorNumber == senderActorNumber)
+                {
+                    GameObject weapon = Plugin.Instance.CreateRemoteWeapon(weaponIndex, rig);
+                    if (weapon != null)
+                    {
+                        RemoteWeapons[senderActorNumber] = weapon;
+                    }
+                    break;
+                }
             }
         }
     }
