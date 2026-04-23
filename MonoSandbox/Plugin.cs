@@ -177,7 +177,7 @@ namespace MonoSandbox
                 return;
             }
 
-            bool shouldShowMenu = InputHandling.LeftGrip > MenuActivationThreshold;
+            bool shouldShowMenu = InputHandling.LeftTrigger > MenuActivationThreshold;
 
             if (_list.activeInHierarchy)
             {
@@ -447,8 +447,10 @@ namespace MonoSandbox
         public GameObject CreateRemoteWeapon(int weaponIndex, VRRig rig)
         {
             Transform remoteHand = rig.rightHandTransform;
-            if (remoteHand == null) return null;
-            GameObject model = weaponIndex switch
+            if (remoteHand == null) 
+                return null;
+            GameObject model = weaponIndex 
+                switch
             {
                 0 => weaponManager.RevolverModel,
                 1 => weaponManager.ShotgunModel,
@@ -461,7 +463,8 @@ namespace MonoSandbox
                 _ => null
             };
 
-            if (model == null) return null;
+            if (model == null) 
+                return null;
 
             GameObject weapon = Instantiate(model);
             weapon.name = "RemoteWeapon";
